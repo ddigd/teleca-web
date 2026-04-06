@@ -582,7 +582,6 @@ function CardItem({ item, onClick }) {
           <AutoImg src={item.thumbnail} padding="12px" style={{ position: "absolute", inset: 0 }} />
         </div>
         {item.isNew && <div style={{ position: "absolute", top: 0, left: 0, background: isMiim ? C.miim : C.red, color: C.white, fontSize: 11, fontWeight: 900, letterSpacing: ".12em", padding: "5px 10px", zIndex: 2 }}>NEW</div>}
-        <div style={{ position: "absolute", top: 0, right: 0, background: isMiim ? C.miim + "E0" : "rgba(0,0,0,.85)", color: C.white, fontSize: 10, fontWeight: 700, padding: "5px 10px", textTransform: "uppercase", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", zIndex: 2 }}>{item.title}</div>
       </div>
       {/* Content */}
       <div style={{ padding: "16px 16px 12px", flex: 1, display: "flex", flexDirection: "column" }}>
