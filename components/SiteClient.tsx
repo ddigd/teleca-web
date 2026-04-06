@@ -163,15 +163,15 @@ const useR = useResponsive;
 const Ctx = createContext(null);
 
 function useToast() {
-  const [t, setT] = useState({ visible: false, message: "" });
-  const show = (msg) => { setT({ visible: true, message: msg }); setTimeout(() => setT(p => ({ ...p, visible: false })), 2500); };
+  const [t, setT] = useState({ visible: false, message: "", isError: false });
+  const show = (msg, isError = false) => { setT({ visible: true, message: msg, isError }); setTimeout(() => setT(p => ({ ...p, visible: false })), 3000); };
   return { toast: t, showToast: show };
 }
 
-function Toast({ message, visible }) {
+function Toast({ message, visible, isError = false }) {
   return (
-    <div style={{ position: "fixed", top: 24, right: 24, zIndex: 9999, background: C.black, color: C.white, padding: "14px 24px", border: `2px solid ${C.green}`, boxShadow: "8px 8px 0 0 rgba(0,0,0,1)", display: "flex", alignItems: "center", gap: 10, transform: visible ? "translateX(0)" : "translateX(calc(100% + 60px))", opacity: visible ? 1 : 0, transition: "all .35s cubic-bezier(.4,0,.2,1)", pointerEvents: "none", maxWidth: 380, fontSize: 14, fontWeight: 700 }}>
-      <div style={{ width: 24, height: 24, background: C.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Check size={14} style={{ color: C.white }} /></div>
+    <div style={{ position: "fixed", top: 24, right: 24, zIndex: 9999, background: C.black, color: C.white, padding: "14px 24px", border: `2px solid ${isError ? C.red : C.green}`, boxShadow: "8px 8px 0 0 rgba(0,0,0,1)", display: "flex", alignItems: "center", gap: 10, transform: visible ? "translateX(0)" : "translateX(calc(100% + 60px))", opacity: visible ? 1 : 0, transition: "all .35s cubic-bezier(.4,0,.2,1)", pointerEvents: "none", maxWidth: 380, fontSize: 14, fontWeight: 700 }}>
+      <div style={{ width: 24, height: 24, background: isError ? C.red : C.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{isError ? <X size={14} style={{ color: C.white }} /> : <Check size={14} style={{ color: C.white }} />}</div>
       {message}
     </div>
   );
@@ -1356,9 +1356,9 @@ function AdminPanel() {
   <div style={{ maxWidth: 1280, margin: "0 auto", padding: mob ? "16px" : "24px 32px" }}>
     <div style={{ display: "flex", border: `2px solid ${C.black}`, width: "fit-content", marginBottom: 24, flexWrap: "wrap" }}>{[{ k: "dashboard", l: "대시보드", i: <BarChart3 size={14} /> }, { k: "list", l: "컬렉션 관리", i: <LayoutGrid size={14} /> }, ...(editingId !== null ? [{ k: "editor", l: editingId === "new" ? "신규 등록" : "수정", i: <Edit2 size={14} /> }] : [])].map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "10px 16px", cursor: "pointer", border: "none", background: tab === t.k ? C.black : C.white, color: tab === t.k ? C.white : C.textMuted, display: "flex", alignItems: "center", gap: 6 }}>{t.i} {t.l}</button>)}</div>
 
-    {tab === "dashboard" && <div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>{[{ l: "전체", v: collections.length, c: C.black }, { l: "텔레카", v: collections.filter(c => c.brand === "TELECA COLLECTION CARD").length, c: C.blue }, { l: "밈", v: collections.filter(c => c.brand === "MIIM CARD").length, c: "#7C3AED" }].map((s, i) => <div key={i} style={{ border: `2px solid ${C.black}`, padding: 20, background: C.white }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted }}>{s.l}</div><div style={{ fontSize: 40, fontWeight: 900, color: s.c, marginTop: 4 }}>{s.v}</div></div>)}</div><div style={sec}><h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${C.gray200}`, display: "flex", alignItems: "center", gap: 8 }}><Settings size={16} /> 메인 히어로 설정</h3><Input label="히어로 타이틀" value={heroSettings.title} onChange={v => setHeroSettings(p => ({ ...p, title: v }))} /><Input label="서브타이틀" value={heroSettings.subtitle} onChange={v => setHeroSettings(p => ({ ...p, subtitle: v }))} /><Sel label="대표 컬렉션" value={heroSettings.featuredId || ""} onChange={v => setHeroSettings(p => ({ ...p, featuredId: v || null }))} options={[{ value: "", label: "— 선택 없음 —" }, ...collections.map(c => ({ value: c.id, label: c.title }))]} /><Btn v="blue" size="sm" onClick={async () => { const ok = await saveHeroSettingsToDB(heroSettings); showToast(ok ? "히어로 설정 저장 완료" : "저장 실패"); }}><Save size={14} /> 저장</Btn></div></div>}
+    {tab === "dashboard" && <div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>{[{ l: "전체", v: collections.length, c: C.black }, { l: "텔레카", v: collections.filter(c => c.brand === "TELECA COLLECTION CARD").length, c: C.blue }, { l: "밈", v: collections.filter(c => c.brand === "MIIM CARD").length, c: "#7C3AED" }].map((s, i) => <div key={i} style={{ border: `2px solid ${C.black}`, padding: 20, background: C.white }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted }}>{s.l}</div><div style={{ fontSize: 40, fontWeight: 900, color: s.c, marginTop: 4 }}>{s.v}</div></div>)}</div><div style={sec}><h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${C.gray200}`, display: "flex", alignItems: "center", gap: 8 }}><Settings size={16} /> 메인 히어로 설정</h3><Input label="히어로 타이틀" value={heroSettings.title} onChange={v => setHeroSettings(p => ({ ...p, title: v }))} /><Input label="서브타이틀" value={heroSettings.subtitle} onChange={v => setHeroSettings(p => ({ ...p, subtitle: v }))} /><Sel label="대표 컬렉션" value={heroSettings.featuredId || ""} onChange={v => setHeroSettings(p => ({ ...p, featuredId: v || null }))} options={[{ value: "", label: "— 선택 없음 —" }, ...collections.map(c => ({ value: c.id, label: c.title }))]} /><Btn v="blue" size="sm" onClick={async () => { const ok = await saveHeroSettingsToDB(heroSettings); showToast(ok ? "히어로 설정 저장 완료" : "저장 실패", !ok); }}><Save size={14} /> 저장</Btn></div></div>}
 
-    {tab === "list" && <div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}><h2 style={{ fontSize: 20, fontWeight: 900 }}>전체 컬렉션</h2><div style={{ display: "flex", gap: 8 }}><Btn size="sm" v="blue" onClick={() => { setEditingId("new"); setTab("editor"); }}><Plus size={14} /> 신규</Btn><Btn size="sm" onClick={exportJSON}><Download size={14} /> JSON</Btn></div></div><div style={{ border: `2px solid ${C.black}` }}>{collections.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "10px 12px" : "12px 20px", borderBottom: i < collections.length - 1 ? `1px solid ${C.gray200}` : "none", background: C.white, gap: 8 }}><div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}><div style={{ width: 48, height: 36, flexShrink: 0, position: "relative" }}><AutoImg src={c.thumbnail} padding="4px" style={{ position: "absolute", inset: 0 }} /></div><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div><div style={{ fontSize: 11, color: C.textMuted }}>{c.brand} · {c.date}</div></div></div><div style={{ display: "flex", gap: 4 }}><Btn size="sm" v="ghost" onClick={() => { setEditingId(c.id); setTab("editor"); }}><Edit2 size={14} /></Btn><Btn size="sm" v="ghost" onClick={() => { if (confirm("삭제?")) { deleteCollectionFromDB(c.id).then(ok => { if (ok) { setCollections(p => p.filter(x => x.id !== c.id)); showToast("삭제됨"); } else { alert("삭제 실패"); } }); } }}><Trash2 size={14} /></Btn></div></div>)}</div></div>}
+    {tab === "list" && <div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}><h2 style={{ fontSize: 20, fontWeight: 900 }}>전체 컬렉션</h2><div style={{ display: "flex", gap: 8 }}><Btn size="sm" v="blue" onClick={() => { setEditingId("new"); setTab("editor"); }}><Plus size={14} /> 신규</Btn><Btn size="sm" onClick={exportJSON}><Download size={14} /> JSON</Btn></div></div><div style={{ border: `2px solid ${C.black}` }}>{collections.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "10px 12px" : "12px 20px", borderBottom: i < collections.length - 1 ? `1px solid ${C.gray200}` : "none", background: C.white, gap: 8 }}><div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}><div style={{ width: 48, height: 36, flexShrink: 0, position: "relative" }}><AutoImg src={c.thumbnail} padding="4px" style={{ position: "absolute", inset: 0 }} /></div><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div><div style={{ fontSize: 11, color: C.textMuted }}>{c.brand} · {c.date}</div></div></div><div style={{ display: "flex", gap: 4 }}><Btn size="sm" v="ghost" onClick={() => { setEditingId(c.id); setTab("editor"); }}><Edit2 size={14} /></Btn><Btn size="sm" v="ghost" onClick={() => { if (confirm("삭제?")) { deleteCollectionFromDB(c.id).then(ok => { if (ok) { setCollections(p => p.filter(x => x.id !== c.id)); showToast("삭제됨"); } else { showToast("삭제 실패", true); } }); } }}><Trash2 size={14} /></Btn></div></div>)}</div></div>}
 
     {tab === "editor" && <EditorForm editingId={editingId} onDone={(msg) => { setEditingId(null); setTab("list"); if (msg) showToast(msg); }} showToast={showToast} />}
   </div></div>);
@@ -1373,10 +1373,10 @@ function EditorForm({ editingId, onDone, showToast }) {
   const updCC = (i, k, v) => { const a = [...fm.chasingCards]; a[i] = { ...a[i], [k]: v }; u("chasingCards", a); };
   const delCC = (i) => u("chasingCards", fm.chasingCards.filter((_, idx) => idx !== i));
   const xlsxRef = useRef(null);
-  const handleFile = async (file) => { try { const rows = await parseXlsx(file); u("checklist", rows); showToast(`${rows.length}건 업로드`); } catch { alert("파싱 실패"); } };
+  const handleFile = async (file) => { try { const rows = await parseXlsx(file); u("checklist", rows); showToast(`${rows.length}건 업로드`); } catch { showToast("파싱 실패", true); } };
   const [saving, setSaving] = useState(false);
   const save = async () => {
-    if (!fm.title.trim()) { alert("타이틀 필요"); return; }
+    if (!fm.title.trim()) { showToast("타이틀을 입력해주세요", true); return; }
     setSaving(true);
     const ok = await saveCollectionToDB(fm, isNew, editingId);
     if (ok) {
@@ -1384,7 +1384,7 @@ function EditorForm({ editingId, onDone, showToast }) {
       const fresh = await fetchCollectionsFromDB();
       setCollections(fresh);
       onDone(isNew ? "등록 완료" : "수정 완료");
-    } else { alert("저장 실패"); }
+    } else { showToast("저장 실패", true); }
     setSaving(false);
   };
   const sec = { border: `2px solid ${C.black}`, padding: mob ? 16 : 24, background: C.white, marginBottom: 20 };
@@ -1410,6 +1410,24 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
   const [adminMode, setAdminMode] = useState(false);
   const [adminAuth, setAdminAuth] = useState(false);
   const setPage = (p) => { setPageRaw(p); window.scrollTo({ top: 0, behavior: "instant" }); };
+
+  // Dynamic page title for SEO
+  useEffect(() => {
+    const titles = {
+      home: "TELECA — Premium Trading Cards",
+      collection: "Collection | TELECA",
+      contact: "Contact Us | TELECA",
+      faq: "FAQ | TELECA",
+      privacy: "Privacy Policy | TELECA",
+      terms: "Terms of Service | TELECA",
+    };
+    if (page.view === "detail") {
+      const item = collections.find(c => c.id === page.id);
+      document.title = item ? `${item.title} | TELECA` : "TELECA";
+    } else {
+      document.title = titles[page.view] || "TELECA";
+    }
+  }, [page, collections]);
 
   useEffect(() => {
     const s = document.createElement("style");
