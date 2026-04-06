@@ -896,7 +896,7 @@ function OrderModal({ open, onClose, item, ctaType }) {
 }
 
 function DetailPage({ id }) {
-  const { collections, setPage } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
+  const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
   const item = collections.find(c => c.id === id);
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
