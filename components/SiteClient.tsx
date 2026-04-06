@@ -85,7 +85,7 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     <div ref={ref} style={{ position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", ...sx, background: bg }}>
       {inView && src && (
         <img src={src} alt="" loading="lazy" onLoad={() => setLoaded(true)}
-          style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", padding, boxSizing: "border-box", opacity: loaded ? 1 : 0, transition: "opacity .4s", filter: noShadow ? "none" : "drop-shadow(0 4px 12px rgba(0,0,0,0.5))", imageRendering: "auto", WebkitBackfaceVisibility: "hidden", backfaceVisibility: "hidden", transform: "translateZ(0)" }} />
+          style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", padding, boxSizing: "border-box", opacity: loaded ? 1 : 0, transition: "opacity .4s", filter: noShadow ? "none" : "drop-shadow(0 4px 12px rgba(0,0,0,0.5))", imageRendering: noShadow ? "high-quality" : "auto", WebkitBackfaceVisibility: noShadow ? "visible" : "hidden", backfaceVisibility: noShadow ? "visible" : "hidden", transform: noShadow ? "none" : "translateZ(0)" }} />
       )}
       {(!loaded || !src) && (
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -175,35 +175,33 @@ function ChasingCardItem({ cc, index }) {
         borderBottom: `2px solid ${C.black}`,
         flexShrink: 0,
       }}>
-        {/* Subtle carbon fiber texture */}
+        {/* Subtle carbon fiber texture — hover only */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
           backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px), repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px)",
           backgroundSize: "4px 4px",
+          opacity: hov ? 1 : 0, transition: "opacity .4s ease",
         }} />
 
         {/* Center bright glow — card illumination */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
           background: `radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.08) 0%, ${accent}08 25%, transparent 55%)`,
-          opacity: hov ? 0.8 : 0.3,
+          opacity: hov ? 0.7 : 0,
           transition: "opacity .4s ease",
         }} />
 
-        {/* Soft vignette — lighter than before */}
+        {/* Soft vignette — hover only */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-          background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.25) 100%)",
+          background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.2) 100%)",
+          opacity: hov ? 1 : 0, transition: "opacity .4s ease",
         }} />
 
         <div style={{ paddingTop: "120%" }} />
-        <AutoImg src={cc.image} padding="6px" style={{ position: "absolute", inset: 0, background: "transparent" }} noShadow />
+        <AutoImg src={cc.image} padding="2px" style={{ position: "absolute", inset: 0, background: "transparent" }} noShadow />
 
-        {/* Inner frame line */}
-        <div style={{
-          position: "absolute", inset: 6, zIndex: 2, pointerEvents: "none",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }} />
+
 
         {/* Holo L1: Ambient shimmer (always) */}
         <div style={{
