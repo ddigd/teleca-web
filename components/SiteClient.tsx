@@ -553,7 +553,7 @@ function ImgUp({ label, value, onChange, h = 160 }) {
    NAV & FOOTER
    ═══════════════════════════════════════ */
 function Nav() {
-  const { page, setPage } = useContext(Ctx);
+  const { page, setPage, lang } = useContext(Ctx) || {};
   const { mob } = useR();
   const [open, setOpen] = useState(false);
   const ctx = useContext(Ctx);
@@ -1161,7 +1161,7 @@ const FAQ_DATA = [
 function FaqPage() {
   const { mob } = useR();
   const { lang } = useContext(Ctx) || {};
-  const { setPage } = useContext(Ctx);
+  const { setPage, lang } = useContext(Ctx) || {};
   const [openIdx, setOpenIdx] = useState(null);
 
   const toggle = (key) => setOpenIdx(openIdx === key ? null : key);
