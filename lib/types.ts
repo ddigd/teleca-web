@@ -14,6 +14,7 @@ export interface Collection {
   is_new: boolean;
   status: string;
   sort_order: number;
+  checklist_url?: string | null;
   chasing_cards?: ChasingCard[];
   checklist_items?: ChecklistItem[];
 }

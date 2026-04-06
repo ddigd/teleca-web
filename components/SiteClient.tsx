@@ -41,6 +41,7 @@ async function saveCollectionToDB(fm: any, isNew: boolean, editingId: string | n
     date_label: fm.date || null,
     is_new: fm.isNew || false,
     status: fm.status || "new",
+    checklist_url: fm.checklistUrl || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -129,6 +130,7 @@ async function fetchCollectionsFromDB() {
       tag: cc.tag || "", tagColor: cc.tag_color || "#7C3AED",
       code: cc.code || "", image: cc.image_url,
     })),
+    checklistUrl: c.checklist_url || "",
     checklist: (c.checklist_items || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((cl: any) => ({
       number: cl.number || "", name: cl.name || "", rarity: cl.rarity || "",
     })),
@@ -896,8 +898,9 @@ function OrderModal({ open, onClose, item, ctaType }) {
 }
 
 function DetailPage({ id }) {
-  const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
+  const { collections, setPage } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
+  const [clView, setClView] = useState("list");
   const item = collections.find(c => c.id === id);
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
   const related = collections.filter(c => c.id !== id && c.brand === item.brand).slice(0, 4);
@@ -950,12 +953,31 @@ function DetailPage({ id }) {
         )}
 
         {tab === "checklist" && (
-          <div style={{ padding: mob ? "28px 16px" : "36px 32px", overflowX: "auto" }}>
-            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 20 }}>{t("detail.checklistTitle", lang)}</h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
-              <thead><tr>{["#", "CARD NAME", "RARITY"].map(h => <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 700, padding: "10px 14px", borderBottom: `3px solid ${C.black}`, color: C.textMuted }}>{h}</th>)}</tr></thead>
-              <tbody>{item.checklist.map((cl, i) => <tr key={i}><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontWeight: 700, fontSize: 13, width: 70 }}>{cl.number}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontSize: 13 }}>{cl.name}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}` }}><span style={rs(cl.rarity)}>{cl.rarity.toUpperCase()}</span></td></tr>)}</tbody>
-            </table>
+          <div style={{ padding: mob ? "28px 16px" : "36px 32px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+              <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase" }}>{t("detail.checklistTitle", lang)}</h3>
+              {item.checklistUrl && (
+                <div style={{ display: "flex", border: `2px solid ${C.black}` }}>
+                  <button onClick={() => setClView("list")} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "6px 14px", border: "none", cursor: "pointer", background: clView === "list" ? C.black : "transparent", color: clView === "list" ? C.white : C.textMuted }}>{lang === "ko" ? "목록" : "List"}</button>
+                  <button onClick={() => setClView("image")} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "6px 14px", border: "none", cursor: "pointer", background: clView === "image" ? C.black : "transparent", color: clView === "image" ? C.white : C.textMuted }}>{lang === "ko" ? "이미지" : "Image"}</button>
+                </div>
+              )}
+            </div>
+            {clView === "list" ? (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
+                  <thead><tr>{["#", "CARD NAME", "RARITY"].map(h => <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 700, padding: "10px 14px", borderBottom: `3px solid ${C.black}`, color: C.textMuted }}>{h}</th>)}</tr></thead>
+                  <tbody>{item.checklist.map((cl, i) => <tr key={i}><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontWeight: 700, fontSize: 13, width: 70 }}>{cl.number}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontSize: 13 }}>{cl.name}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}` }}><span style={rs(cl.rarity)}>{cl.rarity.toUpperCase()}</span></td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ border: `2px solid ${C.black}`, overflow: "hidden" }}>
+                <iframe src={item.checklistUrl} style={{ width: "100%", height: mob ? 500 : 700, border: "none" }} title="Image Checklist" />
+                <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.gray200}`, textAlign: "center" }}>
+                  <a href={item.checklistUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: C.blue, textDecoration: "none" }}>BREAK MARKET에서 전체 보기 ↗</a>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1406,7 +1428,7 @@ function AdminPanel() {
 function EditorForm({ editingId, onDone, showToast }) {
   const { collections, setCollections } = useContext(Ctx); const { mob } = useR(); const isNew = editingId === "new";
   const existing = !isNew ? collections.find(c => c.id === editingId) : null;
-  const blank = { brand: "TELECA COLLECTION CARD", title: "", description: "", productInfo: "", thumbnail: null, mainImage: null, cardsPerPack: 5, packsPerBox: 20, boxesPerCase: 12, releaseDate: "", date: "", isNew: true, status: "new", chasingCards: [], checklist: [] };
+  const blank = { brand: "TELECA COLLECTION CARD", title: "", description: "", productInfo: "", thumbnail: null, mainImage: null, cardsPerPack: 5, packsPerBox: 20, boxesPerCase: 12, releaseDate: "", date: "", isNew: true, status: "new", chasingCards: [], checklist: [], checklistUrl: "" };
   const [fm, setFm] = useState(existing ? { ...existing } : blank); const u = (k, v) => setFm(p => ({ ...p, [k]: v }));
   const addCC = () => u("chasingCards", [...fm.chasingCards, { name: "", desc: "", ratio: "", tag: "", tagColor: "#7C3AED", code: "", image: null }]);
   const updCC = (i, k, v) => { const a = [...fm.chasingCards]; a[i] = { ...a[i], [k]: v }; u("chasingCards", a); };
@@ -1435,6 +1457,7 @@ function EditorForm({ editingId, onDone, showToast }) {
     <div style={sec}>{secH(<Package size={16} />, "스펙")}<div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3,1fr)", gap: mob ? 0 : 16 }}><Input label="팩당 카드" type="number" value={fm.cardsPerPack} onChange={v => u("cardsPerPack", parseInt(v) || 0)} /><Input label="박스당 팩" type="number" value={fm.packsPerBox} onChange={v => u("packsPerBox", parseInt(v) || 0)} /><Input label="케이스당 박스" type="number" value={fm.boxesPerCase} onChange={v => u("boxesPerCase", parseInt(v) || 0)} /></div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: mob ? 0 : 16 }}><Input label="릴리즈" type="date" value={fm.releaseDate} onChange={v => u("releaseDate", v)} /><Input label="날짜 텍스트" value={fm.date} onChange={v => u("date", v)} placeholder="26.04" /></div></div>
     <div style={sec}>{secH(<Target size={16} />, "체이싱 카드")}{fm.chasingCards.map((cc, i) => <div key={i} style={{ border: `1px solid ${C.gray200}`, padding: mob ? 12 : 16, marginBottom: 12, background: C.pageBg, position: "relative" }}><button onClick={() => delCC(i)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.red }}><Trash2 size={14} /></button><div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, marginBottom: 8 }}>#{i + 1}</div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr 1fr", gap: mob ? 0 : 12 }}><Input label="카드명" value={cc.name} onChange={v => updCC(i, "name", v)} /><Input label="태그" value={cc.tag} onChange={v => updCC(i, "tag", v)} /><Input label="코드" value={cc.code} onChange={v => updCC(i, "code", v)} /></div><Input label="설명" value={cc.desc} onChange={v => updCC(i, "desc", v)} /><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr auto 1fr", gap: mob ? 0 : 12, alignItems: "end" }}><Input label="확률" value={cc.ratio} onChange={v => updCC(i, "ratio", v)} /><div style={{ marginBottom: 16 }}><label style={{ display: "block", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>색상</label><input type="color" value={cc.tagColor} onChange={e => updCC(i, "tagColor", e.target.value)} style={{ width: 40, height: 36, border: `2px solid ${C.black}`, cursor: "pointer", padding: 0 }} /></div><ImgUp label="이미지" value={cc.image} onChange={v => updCC(i, "image", v)} h={80} /></div></div>)}<Btn size="sm" onClick={addCC}><Plus size={14} /> 추가</Btn></div>
     <div style={sec}>{secH(<FileSpreadsheet size={16} />, "체크리스트")}<div onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.blue; }} onDragLeave={e => e.currentTarget.style.borderColor = C.textLight} onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.textLight; if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }} onClick={() => xlsxRef.current?.click()} style={{ border: `2px dashed ${C.textLight}`, padding: 28, textAlign: "center", cursor: "pointer", background: C.gray100, marginBottom: 16 }}><Upload size={24} style={{ color: C.textMuted, margin: "0 auto 6px" }} /><div style={{ fontSize: 13, fontWeight: 700 }}>.xlsx / .csv 업로드</div></div><input ref={xlsxRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />{fm.checklist.length > 0 && <div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>{fm.checklist.length}건</span><Btn size="sm" v="ghost" onClick={() => u("checklist", [])}><Trash2 size={12} /> 초기화</Btn></div><div style={{ border: `2px solid ${C.black}`, maxHeight: 260, overflowY: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr style={{ position: "sticky", top: 0, background: C.white }}>{["#", "NAME", "RARITY"].map(h => <th key={h} style={{ textAlign: "left", fontSize: 10, fontWeight: 700, padding: "8px 12px", borderBottom: `2px solid ${C.black}`, color: C.textMuted }}>{h}</th>)}</tr></thead><tbody>{fm.checklist.map((cl, i) => <tr key={i}><td style={{ padding: "5px 12px", borderBottom: `1px solid ${C.gray200}`, fontSize: 12, fontWeight: 700 }}>{cl.number}</td><td style={{ padding: "5px 12px", borderBottom: `1px solid ${C.gray200}`, fontSize: 12 }}>{cl.name}</td><td style={{ padding: "5px 12px", borderBottom: `1px solid ${C.gray200}`, fontSize: 12 }}>{cl.rarity}</td></tr>)}</tbody></table></div></div>}</div>
+    <div style={sec}>{secH(<ClipboardList size={16} />, "이미지 체크리스트 URL")}<Input label="외부 체크리스트 URL" value={fm.checklistUrl || ""} onChange={v => u("checklistUrl", v)} placeholder="https://app.break.market/card-checklist/..." /></div>
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}><Btn v="ghost" onClick={() => onDone(null)}>Cancel</Btn><Btn v="blue" onClick={save}><Save size={14} /> 저장</Btn></div>
   </div>);
 }

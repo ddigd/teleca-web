@@ -29,6 +29,7 @@ export function mapCollection(c: Collection) {
         code: cc.code || "",
         image: getImageUrl(cc.image_url),
       })),
+    checklistUrl: c.checklist_url || "",
     checklist: (c.checklist_items || [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map(cl => ({
