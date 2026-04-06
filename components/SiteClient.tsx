@@ -205,17 +205,6 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     return () => obs.disconnect();
   }, []);
 
-  // URL routing: listen for back/forward
-  useEffect(() => {
-    const handlePop = () => {
-      const p = pathToPage(window.location.pathname, window.location.search);
-      setPageRaw(p);
-      window.scrollTo({ top: 0, behavior: "instant" });
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
-
   // Determine background: use sx.background if provided, else default dark gradient
   const defaultBg = "linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f1626 100%)";
   const bg = sx?.background || defaultBg;
@@ -973,7 +962,7 @@ function OrderModal({ open, onClose, item, ctaType }) {
 }
 
 function DetailPage({ id }) {
-  const { collections, setPage } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
+  const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
   const [clView, setClView] = useState("list");
   const item = collections.find(c => c.id === id);
@@ -1587,7 +1576,7 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     setLang(next);
     localStorage.setItem("teleca-lang", next);
   };
-  useEffect(() => { setLang(detectLang()); }, []);
+  useEffect(() => { const d = detectLang(); if (d !== 'en') setLang(d); }, []);
   const [adminMode, setAdminMode] = useState(false);
   const [adminAuth, setAdminAuth] = useState(false);
   const setPage = (p) => {
@@ -1599,6 +1588,17 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     }
   };
 
+
+  // URL routing: listen for back/forward
+  useEffect(() => {
+    const handlePop = () => {
+      const p = pathToPage(window.location.pathname, window.location.search);
+      setPageRaw(p);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
   // Dynamic page title for SEO
   useEffect(() => {
     const titles = {
