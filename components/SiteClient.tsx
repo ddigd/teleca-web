@@ -4,7 +4,7 @@ import {
   Settings, Plus, Trash2, Upload, Download, Edit2, LayoutGrid, Zap, Crown,
   Target, CheckSquare, Info, ShoppingCart, X, Save, FileSpreadsheet, Package,
   Image as ImageIcon, Menu, ArrowLeft, Lock, LogOut, Shield, BarChart3,
-  Check, Home, Bell, Send, CalendarCheck, ClipboardList, ChevronLeft, ChevronRight
+  Check, Home, Bell, Send, CalendarCheck, ClipboardList, ChevronLeft, ChevronRight, Globe
 } from "lucide-react";
 import { C, F, gridBg, gridBgLight, NOISE_SVG, ADMIN_PW } from "@/lib/constants";
 import { t, detectLang, Lang } from "@/lib/i18n";
@@ -548,7 +548,6 @@ function Nav() {
   const navLang = ctx?.lang || "en";
   const navToggle = ctx?.toggleLang;
   const links = [{ key: "home", label: t("nav.home", navLang) }, { key: "collection", label: t("nav.collection", navLang) }, { key: "contact", label: t("nav.contact", navLang) }];
-  return (<nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "0 16px" : "0 32px", height: 56, background: C.black, position: "sticky", top: 0, zIndex: 100 }}><div style={{ display: "flex", alignItems: "center", gap: mob ? 12 : 24 }}><img src={LOGO_SRC} alt="TELECA" onClick={() => setPage({ view: "home" })} style={{ height: mob ? 22 : 28, cursor: "pointer" }} />{!mob && links.map(l => <button key={l.key} onClick={() => setPage({ view: l.key })} style={{ fontFamily: F.ui, color: page.view === l.key ? C.white : C.textLight, fontSize: 13, fontWeight: 700, letterSpacing: ".06em", cursor: "pointer", textTransform: "uppercase", border: "none", background: "none", borderBottom: page.view === l.key ? "2px solid white" : "2px solid transparent", padding: "4px 0" }}>{l.label}</button>)}<button onClick={() => navToggle?.()} style={{ fontFamily: F.ui, color: C.textLight, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "uppercase", border: "1px solid rgba(255,255,255,.3)", background: "none", padding: "3px 8px", marginLeft: 8 }}>{t("lang.toggle", navLang)}</button></div>{mob && <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", color: C.white, cursor: "pointer" }}><Menu size={20} /></button>}{mob && open && <div style={{ position: "absolute", top: 56, left: 0, right: 0, background: C.black, zIndex: 99 }}>{links.map(l => <button key={l.key} onClick={() => { setPage({ view: l.key }); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: page.view === l.key ? C.gray800 : "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{l.label}</button>)}<button onClick={() => { navToggle?.(); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{t("lang.toggle", navLang)}</button></div>}</nav>);
 }
 
 function Footer() {
