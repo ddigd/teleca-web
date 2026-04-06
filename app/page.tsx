@@ -2,7 +2,7 @@ import { getCollections, getHeroSettings } from "@/lib/queries";
 import { mapCollection } from "@/lib/mapper";
 import SiteClient from "@/components/SiteClient";
 
-export const revalidate = 60; // ISR: revalidate every 60 seconds
+export const dynamic = "force-dynamic"; // Always fetch fresh data
 
 export default async function Page() {
   const [rawCollections, heroSettings] = await Promise.all([
