@@ -203,17 +203,6 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     return () => obs.disconnect();
   }, []);
 
-  // Language detection
-  useEffect(() => {
-    setLang(detectLang());
-  }, []);
-
-  const toggleLang = () => {
-    const next = lang === "en" ? "ko" : "en";
-    setLang(next);
-    localStorage.setItem("teleca-lang", next);
-  };
-
   // URL routing: listen for back/forward
   useEffect(() => {
     const handlePop = () => {
@@ -1495,6 +1484,12 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
   const [collections, setCollections] = useState(initialCollections);
   const [heroSettings, setHeroSettings] = useState(initialHeroSettings || { title: "COLLECT\nTHE LEGENDS", subtitle: "Collect special moments of the world's greatest stars", featuredId: null });
   const [lang, setLang] = useState<Lang>("en");
+  const toggleLang = () => {
+    const next = lang === "en" ? "ko" : "en";
+    setLang(next);
+    localStorage.setItem("teleca-lang", next);
+  };
+  useEffect(() => { setLang(detectLang()); }, []);
   const [adminMode, setAdminMode] = useState(false);
   const [adminAuth, setAdminAuth] = useState(false);
   const setPage = (p) => {
@@ -1548,7 +1543,7 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     return () => document.head.removeChild(s);
   }, []);
 
-  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, lang, toggleLang: () => { const n = lang === "en" ? "ko" : "en"; setLang(n); localStorage.setItem("teleca-lang", n); }, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
+  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, lang, toggleLang, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
 
   if (adminMode) {
     if (!adminAuth) return <AdminLogin onAuth={() => setAdminAuth(true)} />;
@@ -1573,4 +1568,3 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     </Ctx.Provider>
   );
 }
-// rebuild
