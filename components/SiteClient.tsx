@@ -572,7 +572,7 @@ function CardItem({ item, onClick }) {
       overflow: "hidden", height: "100%",
       display: "flex", flexDirection: "column",
       transition: "transform .3s cubic-bezier(.23,1,.32,1), box-shadow .3s ease",
-      transform: hov ? "perspective(600px) rotateX(-2deg)" : "perspective(600px) rotateX(0)",
+      transform: "none",
       boxShadow: hov ? `8px 8px 0 0 ${isMiim ? C.miim + "90" : "rgba(0,0,0,1)"}` : "none",
     }} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={onClick}>
       {/* Image */}
