@@ -204,6 +204,18 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // URL routing: listen for back/forward
+  useEffect(() => {
+    const handlePop = () => {
+      const p = pathToPage(window.location.pathname, window.location.search);
+      setPageRaw(p);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
   // Determine background: use sx.background if provided, else default dark gradient
   const defaultBg = "linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f1626 100%)";
   const bg = sx?.background || defaultBg;
@@ -548,6 +560,28 @@ function Nav() {
   const navLang = ctx?.lang || "en";
   const navToggle = ctx?.toggleLang;
   const links = [{ key: "home", label: t("nav.home", navLang) }, { key: "collection", label: t("nav.collection", navLang) }, { key: "contact", label: t("nav.contact", navLang) }];
+  return (
+    <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "0 16px" : "0 32px", height: 56, background: C.black, position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: mob ? 12 : 24 }}>
+        <img src={LOGO_SRC} alt="TELECA" onClick={() => setPage({ view: "home" })} style={{ height: mob ? 22 : 28, cursor: "pointer" }} />
+        {!mob && links.map(l => (
+          <button key={l.key} onClick={() => setPage({ view: l.key })} style={{ fontFamily: F.ui, color: page?.view === l.key ? C.white : C.textLight, fontSize: 13, fontWeight: 700, letterSpacing: ".06em", cursor: "pointer", textTransform: "uppercase", border: "none", background: "none", borderBottom: page?.view === l.key ? "2px solid white" : "2px solid transparent", padding: "4px 0" }}>{l.label}</button>
+        ))}
+        {!mob && <button onClick={() => navToggle?.()} style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", padding: 4, marginLeft: 8, display: "flex", alignItems: "center" }} title={t("lang.toggle", navLang)}><Globe size={18} /></button>}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {mob && <button onClick={() => navToggle?.()} style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }} title={t("lang.toggle", navLang)}><Globe size={18} /></button>}
+        {mob && <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", color: C.white, cursor: "pointer" }}><Menu size={20} /></button>}
+      </div>
+      {mob && open && (
+        <div style={{ position: "absolute", top: 56, left: 0, right: 0, background: C.black, zIndex: 99 }}>
+          {links.map(l => (
+            <button key={l.key} onClick={() => { setPage({ view: l.key }); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: page?.view === l.key ? C.gray800 : "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{l.label}</button>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
 }
 
 function Footer() {
@@ -571,7 +605,7 @@ function CardItem({ item, onClick }) {
       overflow: "hidden", height: "100%",
       display: "flex", flexDirection: "column",
       transition: "transform .3s cubic-bezier(.23,1,.32,1), box-shadow .3s ease",
-      transform: "none",
+      transform: hov ? "perspective(600px) rotateX(-2deg)" : "perspective(600px) rotateX(0)",
       boxShadow: hov ? `8px 8px 0 0 ${isMiim ? C.miim + "90" : "rgba(0,0,0,1)"}` : "none",
     }} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={onClick}>
       {/* Image */}
@@ -581,6 +615,7 @@ function CardItem({ item, onClick }) {
           <AutoImg src={item.thumbnail} padding="12px" style={{ position: "absolute", inset: 0 }} />
         </div>
         {item.isNew && <div style={{ position: "absolute", top: 0, left: 0, background: isMiim ? C.miim : C.red, color: C.white, fontSize: 11, fontWeight: 900, letterSpacing: ".12em", padding: "5px 10px", zIndex: 2 }}>NEW</div>}
+        <div style={{ position: "absolute", top: 0, right: 0, background: isMiim ? C.miim + "E0" : "rgba(0,0,0,.85)", color: C.white, fontSize: 10, fontWeight: 700, padding: "5px 10px", textTransform: "uppercase", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", zIndex: 2 }}>{item.title}</div>
       </div>
       {/* Content */}
       <div style={{ padding: "16px 16px 12px", flex: 1, display: "flex", flexDirection: "column" }}>
@@ -673,7 +708,7 @@ function Carousel({ items, onClickItem, cols = 4 }) {
       {/* Scrollable row */}
       <div ref={scrollRef} style={{
         display: "flex", gap, overflowX: "auto", alignItems: "stretch",
-        scrollSnapType: "x mandatory", paddingBottom: 4,
+        scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch", paddingBottom: 4,
         scrollbarWidth: "none", msOverflowStyle: "none",
         WebkitOverflowScrolling: "touch",
       }}>
@@ -884,7 +919,7 @@ function OrderModal({ open, onClose, item, ctaType }) {
 }
 
 function DetailPage({ id }) {
-  const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
+  const { collections, setPage } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
   const [clView, setClView] = useState("list");
   const item = collections.find(c => c.id === id);
@@ -980,7 +1015,7 @@ function DetailPage({ id }) {
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, color: C.white, textTransform: "uppercase", marginBottom: 20 }}>{t("detail.relatedTitle", lang)}</h3>
             <div style={mob ? { display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 8 } : { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-              {related.map(r => <div key={r.id} onClick={() => setPage({ view: "detail", id: r.id })} style={{ background: C.gray800, cursor: "pointer", overflow: "hidden", border: "2px solid rgba(255,255,255,.08)", ...(mob ? { minWidth: "75%", scrollSnapAlign: "start", flexShrink: 0 } : {}) }}><AutoImg src={r.thumbnail} padding="8px" style={{ height: mob ? 140 : 170 }} /><div style={{ padding: "12px 14px" }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textLight, letterSpacing: ".04em", marginBottom: 4 }}>{r.brand}</div><div style={{ fontSize: 15, fontWeight: 900, color: C.white }}>{r.title}</div></div></div>)}
+              {related.map(r => <div key={r.id} onClick={() => setPage({ view: "detail", id: r.id })} style={{ background: C.gray800, cursor: "pointer", overflow: "hidden", border: "2px solid rgba(255,255,255,.08)", ...(mob ? { minWidth: "75%", scrollSnapAlign: "start", scrollSnapStop: "always", flexShrink: 0 } : {}) }}><AutoImg src={r.thumbnail} padding="8px" style={{ height: mob ? 140 : 170 }} /><div style={{ padding: "12px 14px" }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textLight, letterSpacing: ".04em", marginBottom: 4 }}>{r.brand}</div><div style={{ fontSize: 15, fontWeight: 900, color: C.white }}>{r.title}</div></div></div>)}
             </div>
           </div>
         </div>
@@ -1146,7 +1181,8 @@ const FAQ_DATA = [
 
 function FaqPage() {
   const { mob } = useR();
-  const { setPage, lang } = useContext(Ctx) || {};
+  const { lang } = useContext(Ctx) || {};
+  const { setPage } = useContext(Ctx);
   const [openIdx, setOpenIdx] = useState(null);
 
   const toggle = (key) => setOpenIdx(openIdx === key ? null : key);
@@ -1508,16 +1544,6 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
       window.history.pushState(p, "", path);
     }
   };
-
-  useEffect(() => {
-    const handlePop = () => {
-      const p = pathToPage(window.location.pathname, window.location.search);
-      setPageRaw(p);
-      window.scrollTo({ top: 0, behavior: "instant" });
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
 
   // Dynamic page title for SEO
   useEffect(() => {
