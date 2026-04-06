@@ -1160,7 +1160,6 @@ const FAQ_DATA = [
 
 function FaqPage() {
   const { mob } = useR();
-  const { lang } = useContext(Ctx) || {};
   const { setPage, lang } = useContext(Ctx) || {};
   const [openIdx, setOpenIdx] = useState(null);
 
