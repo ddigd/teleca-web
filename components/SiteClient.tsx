@@ -9,6 +9,121 @@ import {
 import { C, F, gridBg, gridBgLight, NOISE_SVG, ADMIN_PW } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
 import { submitContactInquiry, submitOrderInquiry } from "@/lib/queries";
+/* ═══════════════════════════════════════
+   SUPABASE ADMIN FUNCTIONS
+   ═══════════════════════════════════════ */
+async function uploadImageToStorage(file: File, folder = "collections"): Promise<string | null> {
+  const ext = file.name.split(".").pop() || "png";
+  const name = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("images").upload(name, file, { cacheControl: "3600", upsert: false });
+  if (error) { console.error("Upload error:", error); return null; }
+  const { data } = supabase.storage.from("images").getPublicUrl(name);
+  return data.publicUrl;
+}
+
+async function saveCollectionToDB(fm: any, isNew: boolean, editingId: string | null) {
+  const id = isNew ? fm.title.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-") + "-" + Date.now() : editingId;
+
+  // Upsert collection
+  const collectionData = {
+    id,
+    brand: fm.brand,
+    title: fm.title,
+    description: fm.description || null,
+    product_info: fm.productInfo || null,
+    thumbnail_url: fm.thumbnail || null,
+    main_image_url: fm.mainImage || null,
+    cards_per_pack: fm.cardsPerPack || 5,
+    packs_per_box: fm.packsPerBox || 20,
+    boxes_per_case: fm.boxesPerCase || 12,
+    release_date: fm.releaseDate || null,
+    date_label: fm.date || null,
+    is_new: fm.isNew || false,
+    status: fm.status || "new",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: collErr } = await supabase.from("collections").upsert(collectionData);
+  if (collErr) { console.error("Collection save error:", collErr); return false; }
+
+  // Replace chasing cards: delete old → insert new
+  await supabase.from("chasing_cards").delete().eq("collection_id", id);
+  if (fm.chasingCards && fm.chasingCards.length > 0) {
+    const ccRows = fm.chasingCards.map((cc: any, i: number) => ({
+      collection_id: id,
+      name: cc.name,
+      description: cc.desc || null,
+      ratio: cc.ratio || null,
+      tag: cc.tag || null,
+      tag_color: cc.tagColor || "#7C3AED",
+      code: cc.code || null,
+      image_url: cc.image || null,
+      sort_order: i,
+    }));
+    const { error: ccErr } = await supabase.from("chasing_cards").insert(ccRows);
+    if (ccErr) console.error("Chasing cards save error:", ccErr);
+  }
+
+  // Replace checklist: delete old → insert new
+  await supabase.from("checklist_items").delete().eq("collection_id", id);
+  if (fm.checklist && fm.checklist.length > 0) {
+    const clRows = fm.checklist.map((cl: any, i: number) => ({
+      collection_id: id,
+      number: cl.number || null,
+      name: cl.name || null,
+      rarity: cl.rarity || null,
+      sort_order: i,
+    }));
+    const { error: clErr } = await supabase.from("checklist_items").insert(clRows);
+    if (clErr) console.error("Checklist save error:", clErr);
+  }
+
+  return true;
+}
+
+async function deleteCollectionFromDB(id: string) {
+  // Cascading delete handles chasing_cards and checklist_items
+  const { error } = await supabase.from("collections").delete().eq("id", id);
+  if (error) { console.error("Delete error:", error); return false; }
+  return true;
+}
+
+async function saveHeroSettingsToDB(settings: any) {
+  const { error } = await supabase.from("hero_settings").upsert({
+    id: 1,
+    title: settings.title,
+    subtitle: settings.subtitle,
+    featured_id: settings.featuredId || null,
+  });
+  if (error) { console.error("Hero save error:", error); return false; }
+  return true;
+}
+
+async function fetchCollectionsFromDB() {
+  const { data } = await supabase
+    .from("collections")
+    .select("*, chasing_cards(*), checklist_items(*)")
+    .order("sort_order", { ascending: true });
+  if (!data) return [];
+  // Map to frontend format
+  return data.map((c: any) => ({
+    id: c.id, brand: c.brand, title: c.title,
+    description: c.description || "", productInfo: c.product_info || "",
+    thumbnail: c.thumbnail_url, mainImage: c.main_image_url,
+    cardsPerPack: c.cards_per_pack, packsPerBox: c.packs_per_box,
+    boxesPerCase: c.boxes_per_case, releaseDate: c.release_date || "",
+    date: c.date_label || "", isNew: c.is_new, status: c.status,
+    chasingCards: (c.chasing_cards || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((cc: any) => ({
+      name: cc.name, desc: cc.description || "", ratio: cc.ratio || "",
+      tag: cc.tag || "", tagColor: cc.tag_color || "#7C3AED",
+      code: cc.code || "", image: cc.image_url,
+    })),
+    checklist: (c.checklist_items || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((cl: any) => ({
+      number: cl.number || "", name: cl.name || "", rarity: cl.rarity || "",
+    })),
+  }));
+}
+
 
 import { useResponsive, smoothScroll } from "@/lib/hooks";
 const LOGO_SRC = "data:image/png;base64,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";
@@ -385,47 +500,15 @@ function Sel({ label, value, onChange, options }) {
 
 function ImgUp({ label, value, onChange, h = 160 }) {
   const ref = useRef(null);
-  const handle = (file) => {
+  const [uploading, setUploading] = useState(false);
+  const handle = async (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const raw = e.target.result;
-      // If file is under 2MB, keep original quality — no re-encoding
-      if (file.size < 2 * 1024 * 1024) {
-        onChange(raw);
-        return;
-      }
-      // Only resize if truly oversized
-      const img = new window.Image();
-      img.onload = () => {
-        const MAX = 2400; // Retina-ready
-        let w = img.width, ht = img.height;
-        if (w <= MAX && ht <= MAX) {
-          // Within limits, keep original
-          onChange(raw);
-          return;
-        }
-        const r = Math.min(MAX / w, MAX / ht);
-        w = Math.round(w * r);
-        ht = Math.round(ht * r);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = ht;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, w, ht);
-        // High quality: try PNG first, fallback to WebP 0.97
-        const png = canvas.toDataURL("image/png");
-        if (png.length < 3 * 1024 * 1024) {
-          onChange(png);
-        } else {
-          onChange(canvas.toDataURL("image/webp", 0.97));
-        }
-      };
-      img.src = raw;
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const url = await uploadImageToStorage(file);
+      if (url) { onChange(url); } else { alert("이미지 업로드 실패"); }
+    } catch (err) { console.error(err); alert("이미지 업로드 실패"); }
+    setUploading(false);
   };
   return (
     <div style={{ marginBottom: 16 }}>
@@ -433,7 +516,8 @@ function ImgUp({ label, value, onChange, h = 160 }) {
       <div onClick={() => ref.current?.click()} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handle(e.dataTransfer.files[0]); }}
         style={{ height: h, border: `2px dashed ${value ? C.black : C.textLight}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: value ? "linear-gradient(145deg, #1a1a2e, #0f1626)" : C.gray100, position: "relative", overflow: "hidden" }}>
         {value && <img src={value} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", padding: 10, filter: "drop-shadow(0 3px 8px rgba(0,0,0,0.4))", imageRendering: "auto" }} />}
-        {!value && <div style={{ textAlign: "center", color: C.textMuted }}><Upload size={20} /><div style={{ fontSize: 11, marginTop: 4, fontWeight: 600 }}>클릭 또는 드래그</div></div>}
+        {!value && !uploading && <div style={{ textAlign: "center", color: C.textMuted }}><Upload size={20} /><div style={{ fontSize: 11, marginTop: 4, fontWeight: 600 }}>클릭 또는 드래그</div></div>}
+        {uploading && <div style={{ textAlign: "center", color: C.blue, fontSize: 12, fontWeight: 700 }}>업로드 중...</div>}
         {value && <button onClick={e => { e.stopPropagation(); onChange(null); }} style={{ position: "absolute", top: 4, right: 4, background: C.red, color: C.white, border: "none", width: 22, height: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={12} /></button>}
       </div>
       <input ref={ref} type="file" accept="image/*" hidden onChange={e => handle(e.target.files[0])} />
@@ -1272,9 +1356,9 @@ function AdminPanel() {
   <div style={{ maxWidth: 1280, margin: "0 auto", padding: mob ? "16px" : "24px 32px" }}>
     <div style={{ display: "flex", border: `2px solid ${C.black}`, width: "fit-content", marginBottom: 24, flexWrap: "wrap" }}>{[{ k: "dashboard", l: "대시보드", i: <BarChart3 size={14} /> }, { k: "list", l: "컬렉션 관리", i: <LayoutGrid size={14} /> }, ...(editingId !== null ? [{ k: "editor", l: editingId === "new" ? "신규 등록" : "수정", i: <Edit2 size={14} /> }] : [])].map(t => <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "10px 16px", cursor: "pointer", border: "none", background: tab === t.k ? C.black : C.white, color: tab === t.k ? C.white : C.textMuted, display: "flex", alignItems: "center", gap: 6 }}>{t.i} {t.l}</button>)}</div>
 
-    {tab === "dashboard" && <div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>{[{ l: "전체", v: collections.length, c: C.black }, { l: "텔레카", v: collections.filter(c => c.brand === "TELECA COLLECTION CARD").length, c: C.blue }, { l: "밈", v: collections.filter(c => c.brand === "MIIM CARD").length, c: "#7C3AED" }].map((s, i) => <div key={i} style={{ border: `2px solid ${C.black}`, padding: 20, background: C.white }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted }}>{s.l}</div><div style={{ fontSize: 40, fontWeight: 900, color: s.c, marginTop: 4 }}>{s.v}</div></div>)}</div><div style={sec}><h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${C.gray200}`, display: "flex", alignItems: "center", gap: 8 }}><Settings size={16} /> 메인 히어로 설정</h3><Input label="히어로 타이틀" value={heroSettings.title} onChange={v => setHeroSettings(p => ({ ...p, title: v }))} /><Input label="서브타이틀" value={heroSettings.subtitle} onChange={v => setHeroSettings(p => ({ ...p, subtitle: v }))} /><Sel label="대표 컬렉션" value={heroSettings.featuredId || ""} onChange={v => setHeroSettings(p => ({ ...p, featuredId: v || null }))} options={[{ value: "", label: "— 선택 없음 —" }, ...collections.map(c => ({ value: c.id, label: c.title }))]} /><Btn v="blue" size="sm" onClick={() => showToast("히어로 설정 저장 완료")}><Save size={14} /> 저장</Btn></div></div>}
+    {tab === "dashboard" && <div><div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>{[{ l: "전체", v: collections.length, c: C.black }, { l: "텔레카", v: collections.filter(c => c.brand === "TELECA COLLECTION CARD").length, c: C.blue }, { l: "밈", v: collections.filter(c => c.brand === "MIIM CARD").length, c: "#7C3AED" }].map((s, i) => <div key={i} style={{ border: `2px solid ${C.black}`, padding: 20, background: C.white }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted }}>{s.l}</div><div style={{ fontSize: 40, fontWeight: 900, color: s.c, marginTop: 4 }}>{s.v}</div></div>)}</div><div style={sec}><h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${C.gray200}`, display: "flex", alignItems: "center", gap: 8 }}><Settings size={16} /> 메인 히어로 설정</h3><Input label="히어로 타이틀" value={heroSettings.title} onChange={v => setHeroSettings(p => ({ ...p, title: v }))} /><Input label="서브타이틀" value={heroSettings.subtitle} onChange={v => setHeroSettings(p => ({ ...p, subtitle: v }))} /><Sel label="대표 컬렉션" value={heroSettings.featuredId || ""} onChange={v => setHeroSettings(p => ({ ...p, featuredId: v || null }))} options={[{ value: "", label: "— 선택 없음 —" }, ...collections.map(c => ({ value: c.id, label: c.title }))]} /><Btn v="blue" size="sm" onClick={async () => { const ok = await saveHeroSettingsToDB(heroSettings); showToast(ok ? "히어로 설정 저장 완료" : "저장 실패"); }}><Save size={14} /> 저장</Btn></div></div>}
 
-    {tab === "list" && <div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}><h2 style={{ fontSize: 20, fontWeight: 900 }}>전체 컬렉션</h2><div style={{ display: "flex", gap: 8 }}><Btn size="sm" v="blue" onClick={() => { setEditingId("new"); setTab("editor"); }}><Plus size={14} /> 신규</Btn><Btn size="sm" onClick={exportJSON}><Download size={14} /> JSON</Btn></div></div><div style={{ border: `2px solid ${C.black}` }}>{collections.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "10px 12px" : "12px 20px", borderBottom: i < collections.length - 1 ? `1px solid ${C.gray200}` : "none", background: C.white, gap: 8 }}><div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}><div style={{ width: 48, height: 36, flexShrink: 0, position: "relative" }}><AutoImg src={c.thumbnail} padding="4px" style={{ position: "absolute", inset: 0 }} /></div><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div><div style={{ fontSize: 11, color: C.textMuted }}>{c.brand} · {c.date}</div></div></div><div style={{ display: "flex", gap: 4 }}><Btn size="sm" v="ghost" onClick={() => { setEditingId(c.id); setTab("editor"); }}><Edit2 size={14} /></Btn><Btn size="sm" v="ghost" onClick={() => { if (confirm("삭제?")) { setCollections(p => p.filter(x => x.id !== c.id)); showToast("삭제됨"); } }}><Trash2 size={14} /></Btn></div></div>)}</div></div>}
+    {tab === "list" && <div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}><h2 style={{ fontSize: 20, fontWeight: 900 }}>전체 컬렉션</h2><div style={{ display: "flex", gap: 8 }}><Btn size="sm" v="blue" onClick={() => { setEditingId("new"); setTab("editor"); }}><Plus size={14} /> 신규</Btn><Btn size="sm" onClick={exportJSON}><Download size={14} /> JSON</Btn></div></div><div style={{ border: `2px solid ${C.black}` }}>{collections.map((c, i) => <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "10px 12px" : "12px 20px", borderBottom: i < collections.length - 1 ? `1px solid ${C.gray200}` : "none", background: C.white, gap: 8 }}><div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}><div style={{ width: 48, height: 36, flexShrink: 0, position: "relative" }}><AutoImg src={c.thumbnail} padding="4px" style={{ position: "absolute", inset: 0 }} /></div><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div><div style={{ fontSize: 11, color: C.textMuted }}>{c.brand} · {c.date}</div></div></div><div style={{ display: "flex", gap: 4 }}><Btn size="sm" v="ghost" onClick={() => { setEditingId(c.id); setTab("editor"); }}><Edit2 size={14} /></Btn><Btn size="sm" v="ghost" onClick={() => { if (confirm("삭제?")) { deleteCollectionFromDB(c.id).then(ok => { if (ok) { setCollections(p => p.filter(x => x.id !== c.id)); showToast("삭제됨"); } else { alert("삭제 실패"); } }); } }}><Trash2 size={14} /></Btn></div></div>)}</div></div>}
 
     {tab === "editor" && <EditorForm editingId={editingId} onDone={(msg) => { setEditingId(null); setTab("list"); if (msg) showToast(msg); }} showToast={showToast} />}
   </div></div>);
@@ -1290,7 +1374,19 @@ function EditorForm({ editingId, onDone, showToast }) {
   const delCC = (i) => u("chasingCards", fm.chasingCards.filter((_, idx) => idx !== i));
   const xlsxRef = useRef(null);
   const handleFile = async (file) => { try { const rows = await parseXlsx(file); u("checklist", rows); showToast(`${rows.length}건 업로드`); } catch { alert("파싱 실패"); } };
-  const save = () => { if (!fm.title.trim()) { alert("타이틀 필요"); return; } const id = isNew ? fm.title.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-") + "-" + Date.now() : fm.id; if (isNew) setCollections(p => [...p, { ...fm, id }]); else setCollections(p => p.map(c => c.id === editingId ? { ...fm, id } : c)); onDone(isNew ? "등록 완료" : "수정 완료"); };
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!fm.title.trim()) { alert("타이틀 필요"); return; }
+    setSaving(true);
+    const ok = await saveCollectionToDB(fm, isNew, editingId);
+    if (ok) {
+      // Refetch from DB to get latest data
+      const fresh = await fetchCollectionsFromDB();
+      setCollections(fresh);
+      onDone(isNew ? "등록 완료" : "수정 완료");
+    } else { alert("저장 실패"); }
+    setSaving(false);
+  };
   const sec = { border: `2px solid ${C.black}`, padding: mob ? 16 : 24, background: C.white, marginBottom: 20 };
   const secH = (icon, text) => <h3 style={{ fontSize: 14, fontWeight: 900, marginBottom: 16, paddingBottom: 10, borderBottom: `2px solid ${C.gray200}`, display: "flex", alignItems: "center", gap: 8 }}>{icon} {text}</h3>;
 
