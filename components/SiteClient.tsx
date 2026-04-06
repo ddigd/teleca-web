@@ -204,18 +204,6 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-
-  // URL routing: listen for back/forward
-  useEffect(() => {
-    const handlePop = () => {
-      const p = pathToPage(window.location.pathname, window.location.search);
-      setPageRaw(p);
-      window.scrollTo({ top: 0, behavior: "instant" });
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
-
   // Determine background: use sx.background if provided, else default dark gradient
   const defaultBg = "linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f1626 100%)";
   const bg = sx?.background || defaultBg;
@@ -1522,6 +1510,16 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
       window.history.pushState(p, "", path);
     }
   };
+
+  useEffect(() => {
+    const handlePop = () => {
+      const p = pathToPage(window.location.pathname, window.location.search);
+      setPageRaw(p);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   // Dynamic page title for SEO
   useEffect(() => {
