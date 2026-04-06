@@ -143,7 +143,7 @@ function ChasingCardItem({ cc, index }) {
   const tiltY = hov ? (pos.x - 50) * 0.12 : 0;
 
   const cardTransform = inView
-    ? `perspective(800px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`
+    ? (hov ? `perspective(800px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)` : "none")
     : "perspective(800px) rotateX(15deg) scale(0.97)";
 
   return (
@@ -157,7 +157,7 @@ function ChasingCardItem({ cc, index }) {
       style={{
         cursor: "pointer",
         transformOrigin: "center center",
-        willChange: "transform",
+        willChange: hov ? "transform" : "auto",
         transition: `transform ${appeared ? ".15s" : ".4s"} cubic-bezier(.23,1,.32,1), box-shadow .3s ease, opacity .5s ease`,
         transform: cardTransform,
         opacity: inView ? 1 : 0,
