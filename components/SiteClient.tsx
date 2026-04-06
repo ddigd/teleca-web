@@ -7,6 +7,7 @@ import {
   Check, Home, Bell, Send, CalendarCheck, ClipboardList, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { C, F, gridBg, gridBgLight, NOISE_SVG, ADMIN_PW } from "@/lib/constants";
+import { t, detectLang, Lang } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { submitContactInquiry, submitOrderInquiry } from "@/lib/queries";
 /* ═══════════════════════════════════════
@@ -99,6 +100,16 @@ async function saveHeroSettingsToDB(settings: any) {
   return true;
 }
 
+
+async function notifyEmail(type: string, data: any) {
+  try {
+    await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, data }),
+    });
+  } catch (e) { console.error("Email notify failed:", e); }
+}
 async function fetchCollectionsFromDB() {
   const { data } = await supabase
     .from("collections")
@@ -160,7 +171,7 @@ function parseXlsx(file: File): Promise<any[]> {
    HOOKS & CONTEXT
    ═══════════════════════════════════════ */
 const useR = useResponsive;
-const Ctx = createContext(null);
+const Ctx = createContext<any>(null);
 
 function useToast() {
   const [t, setT] = useState({ visible: false, message: "", isError: false });
@@ -190,6 +201,28 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
     const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } }, { rootMargin: "200px" });
     obs.observe(el);
     return () => obs.disconnect();
+  }, []);
+
+  // Language detection
+  useEffect(() => {
+    setLang(detectLang());
+  }, []);
+
+  const toggleLang = () => {
+    const next = lang === "en" ? "ko" : "en";
+    setLang(next);
+    localStorage.setItem("teleca-lang", next);
+  };
+
+  // URL routing: listen for back/forward
+  useEffect(() => {
+    const handlePop = () => {
+      const p = pathToPage(window.location.pathname, window.location.search);
+      setPageRaw(p);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
   // Determine background: use sx.background if provided, else default dark gradient
@@ -532,14 +565,15 @@ function Nav() {
   const { page, setPage } = useContext(Ctx);
   const { mob } = useR();
   const [open, setOpen] = useState(false);
-  const links = [{ key: "home", label: "HOME" }, { key: "collection", label: "COLLECTION" }, { key: "contact", label: "CONTACT" }];
-  return (<nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "0 16px" : "0 32px", height: 56, background: C.black, position: "sticky", top: 0, zIndex: 100 }}><div style={{ display: "flex", alignItems: "center", gap: mob ? 12 : 24 }}><img src={LOGO_SRC} alt="TELECA" onClick={() => setPage({ view: "home" })} style={{ height: mob ? 22 : 28, cursor: "pointer" }} />{!mob && links.map(l => <button key={l.key} onClick={() => setPage({ view: l.key })} style={{ fontFamily: F.ui, color: page.view === l.key ? C.white : C.textLight, fontSize: 13, fontWeight: 700, letterSpacing: ".06em", cursor: "pointer", textTransform: "uppercase", border: "none", background: "none", borderBottom: page.view === l.key ? "2px solid white" : "2px solid transparent", padding: "4px 0" }}>{l.label}</button>)}</div>{mob && <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", color: C.white, cursor: "pointer" }}><Menu size={20} /></button>}{mob && open && <div style={{ position: "absolute", top: 56, left: 0, right: 0, background: C.black, zIndex: 99 }}>{links.map(l => <button key={l.key} onClick={() => { setPage({ view: l.key }); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: page.view === l.key ? C.gray800 : "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{l.label}</button>)}</div>}</nav>);
+  const { lang: navLang, toggleLang: navToggle } = useContext(Ctx) || {};
+  const links = [{ key: "home", label: t("nav.home", navLang) }, { key: "collection", label: t("nav.collection", navLang) }, { key: "contact", label: t("nav.contact", navLang) }];
+  return (<nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mob ? "0 16px" : "0 32px", height: 56, background: C.black, position: "sticky", top: 0, zIndex: 100 }}><div style={{ display: "flex", alignItems: "center", gap: mob ? 12 : 24 }}><img src={LOGO_SRC} alt="TELECA" onClick={() => setPage({ view: "home" })} style={{ height: mob ? 22 : 28, cursor: "pointer" }} />{!mob && links.map(l => <button key={l.key} onClick={() => setPage({ view: l.key })} style={{ fontFamily: F.ui, color: page.view === l.key ? C.white : C.textLight, fontSize: 13, fontWeight: 700, letterSpacing: ".06em", cursor: "pointer", textTransform: "uppercase", border: "none", background: "none", borderBottom: page.view === l.key ? "2px solid white" : "2px solid transparent", padding: "4px 0" }}>{l.label}</button>)}<button onClick={navToggle} style={{ fontFamily: F.ui, color: C.textLight, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "uppercase", border: "1px solid rgba(255,255,255,.3)", background: "none", padding: "3px 8px", marginLeft: 8 }}>{t("lang.toggle", navLang)}</button></div>{mob && <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", color: C.white, cursor: "pointer" }}><Menu size={20} /></button>}{mob && open && <div style={{ position: "absolute", top: 56, left: 0, right: 0, background: C.black, zIndex: 99 }}>{links.map(l => <button key={l.key} onClick={() => { setPage({ view: l.key }); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: page.view === l.key ? C.gray800 : "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{l.label}</button>)}<button onClick={() => { navToggle?.(); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", color: C.white, fontSize: 14, fontWeight: 700, padding: "14px 16px", border: "none", background: "transparent", cursor: "pointer", borderBottom: `1px solid ${C.gray800}` }}>{t("lang.toggle", navLang)}</button></div>}</nav>);
 }
 
 function Footer() {
-  const { setPage, setAdminMode } = useContext(Ctx);
+  const { setPage, setAdminMode, lang } = useContext(Ctx);
   const { mob } = useR();
-  return (<footer style={{ background: C.white, borderTop: `2px solid ${C.black}`, padding: mob ? "32px 16px" : "48px 32px" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: mob ? 24 : 32 }}>{[{ h: "PRODUCTS", l: [{ t: "TELECA COLLECTION", a: () => setPage({ view: "collection", brand: "TELECA COLLECTION CARD" }) }, { t: "MIIM CARD", a: () => setPage({ view: "collection", brand: "MIIM CARD" }) }, { t: "ALL PRODUCTS", a: () => setPage({ view: "collection" }) }] }, { h: "SUPPORT", l: [{ t: "FAQ", a: () => setPage({ view: "faq" }) }, { t: "CONTACT US", a: () => setPage({ view: "contact" }) }] }, { h: "POLICIES", l: [{ t: "PRIVACY POLICY", a: () => setPage({ view: "privacy" }) }, { t: "TERMS OF SERVICE", a: () => setPage({ view: "terms" }) }] }].map((col, i) => <div key={i}><div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", marginBottom: 12 }}>{col.h}</div>{col.l.map((lnk, j) => <button key={j} onClick={lnk.a} style={{ display: "block", fontSize: 13, color: C.textMuted, marginBottom: 8, cursor: "pointer", background: "none", border: "none", padding: 0, textAlign: "left" }}>{lnk.t}</button>)}</div>)}</div><div style={{ textAlign: "center", fontSize: 11, color: C.textMuted, marginTop: 36, paddingTop: 20, borderTop: `2px solid ${C.black}`, fontWeight: 700 }}>© 2026 <span onClick={() => setAdminMode(true)} style={{ cursor: "default", userSelect: "none" }}>BREAK&COMPANY</span>. ALL RIGHTS RESERVED.</div></div></footer>);
+  return (<footer style={{ background: C.white, borderTop: `2px solid ${C.black}`, padding: mob ? "32px 16px" : "48px 32px" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: mob ? 24 : 32 }}>{[{ h: t("footer.products", lang), l: [{ t: "TELECA COLLECTION", a: () => setPage({ view: "collection", brand: "TELECA COLLECTION CARD" }) }, { t: "MIIM CARD", a: () => setPage({ view: "collection", brand: "MIIM CARD" }) }, { t: t("footer.allProducts", lang), a: () => setPage({ view: "collection" }) }] }, { h: t("footer.support", lang), l: [{ t: t("footer.faq", lang), a: () => setPage({ view: "faq" }) }, { t: t("footer.contactUs", lang), a: () => setPage({ view: "contact" }) }] }, { h: t("footer.policies", lang), l: [{ t: t("footer.privacy", lang), a: () => setPage({ view: "privacy" }) }, { t: t("footer.terms", lang), a: () => setPage({ view: "terms" }) }] }].map((col, i) => <div key={i}><div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".1em", marginBottom: 12 }}>{col.h}</div>{col.l.map((lnk, j) => <button key={j} onClick={lnk.a} style={{ display: "block", fontSize: 13, color: C.textMuted, marginBottom: 8, cursor: "pointer", background: "none", border: "none", padding: 0, textAlign: "left" }}>{lnk.t}</button>)}</div>)}</div><div style={{ textAlign: "center", fontSize: 11, color: C.textMuted, marginTop: 36, paddingTop: 20, borderTop: `2px solid ${C.black}`, fontWeight: 700 }}>© 2026 <span onClick={() => setAdminMode(true)} style={{ cursor: "default", userSelect: "none" }}>BREAK&COMPANY</span>. ALL RIGHTS RESERVED.</div></div></footer>);
 }
 
 /* ═══════════════════════════════════════
@@ -547,6 +581,7 @@ function Footer() {
    ═══════════════════════════════════════ */
 function CardItem({ item, onClick }) {
   const [hov, setHov] = useState(false);
+  const { lang } = useContext(Ctx) || {};
   const isMiim = item.brand === "MIIM CARD";
   const fc = isMiim ? C.miim : C.black; // frame color
   const hc = isMiim ? C.miim : C.blue;  // hover accent
@@ -576,7 +611,7 @@ function CardItem({ item, onClick }) {
       {/* Footer */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", borderTop: `2px solid ${fc}`, flexShrink: 0 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: C.textMuted }}>{item.date}</span>
-        <Btn size="sm" v={hov ? "filled" : "outline"} style={isMiim ? { borderColor: C.miim, background: hov ? C.miim : "transparent", color: hov ? C.white : C.miim } : {}}>VIEW</Btn>
+        <Btn size="sm" v={hov ? "filled" : "outline"} style={isMiim ? { borderColor: C.miim, background: hov ? C.miim : "transparent", color: hov ? C.white : C.miim } : {}}>{t("card.view", lang)}</Btn>
       </div>
     </div>
   );
@@ -618,7 +653,7 @@ function Carousel({ items, onClickItem, cols = 4 }) {
     smoothScroll(el, dir * (cardW + gap));
   };
 
-  if (!items.length) return <div style={{ padding: 40, textAlign: "center", color: C.textMuted, fontSize: 14 }}>No collections yet.</div>;
+  if (!items.length) return <div style={{ padding: 40, textAlign: "center", color: C.textMuted, fontSize: 14 }}>{t("card.noCollections", "en")}</div>;
 
   // Card width: N cols fit + ~60px peek of next card
   const peek = 20;
@@ -677,33 +712,33 @@ function Carousel({ items, onClickItem, cols = 4 }) {
 }
 
 function HomePage() {
-  const { collections, heroSettings, setPage } = useContext(Ctx);
+  const { collections, heroSettings, setPage, lang } = useContext(Ctx);
   const { mob, cols } = useR();
   const [bf, setBf] = useState("TELECA COLLECTION CARD");
-  return (<React.Fragment><div style={{ background: C.black, padding: mob ? "56px 16px" : "96px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "inline-block", border: "2px solid rgba(255,255,255,.3)", color: C.white, fontSize: 11, fontWeight: 700, letterSpacing: ".12em", padding: "5px 14px", marginBottom: 20 }}>PREMIUM TRADING CARDS</div><h1 style={{ fontSize: "clamp(40px,8vw,76px)", fontWeight: 900, color: C.white, lineHeight: 1.0, letterSpacing: "-.03em", textTransform: "uppercase", whiteSpace: "pre-line" }}>{heroSettings.title}</h1><p style={{ color: C.textLight, fontSize: "clamp(14px,2vw,18px)", marginTop: 20, maxWidth: 460, lineHeight: 1.6 }}>{heroSettings.subtitle}</p><div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}><Btn v="filled" onClick={() => setPage({ view: "collection" })}>New Releases →</Btn><Btn v="whiteO" onClick={() => setPage({ view: "collection" })}>Full Catalog</Btn></div></div></div><div style={{ padding: mob ? "40px 16px" : "64px 32px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 8 }}><div><h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: "-.02em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}><Zap size={22} /> NEW RELEASES</h2><p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>Latest collection launches</p></div><Btn size="sm" onClick={() => setPage({ view: "collection" })}>VIEW ALL →</Btn></div><div style={{ borderTop: `2px solid ${C.black}`, paddingTop: 20 }}><Carousel items={(() => { const nw = [...collections].filter(c => c.isNew).sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||"")); return nw.length >= 2 ? nw : [...collections].sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||"")).slice(0, 2); })()} onClickItem={id => setPage({ view: "detail", id })} cols={3} /></div></div><div style={{ padding: mob ? "16px 16px 40px" : "16px 32px 64px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 8 }}><div><h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: "-.02em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}><Crown size={22} /> BRANDS</h2><p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>Browse by collection brand</p></div><div style={{ display: "flex", gap: 8 }}>{["TELECA COLLECTION CARD", "MIIM CARD"].map(b => { const isMiim = b === "MIIM CARD"; const active = bf === b; return <button key={b} onClick={() => setBf(b)} style={{ fontFamily: F.ui, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", border: `2px solid ${isMiim ? C.miim : C.black}`, background: active ? (isMiim ? C.miim : C.black) : "transparent", color: active ? C.white : (isMiim ? C.miim : C.textPrimary), transition: "all .25s", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>{b}</button>; })}</div></div><Carousel items={[...collections].filter(c => c.brand === bf).sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||""))} onClickItem={id => setPage({ view: "detail", id })} cols={4} /></div><div style={{ background: "#000", padding: mob ? "56px 16px" : "80px 32px", textAlign: "center", backgroundImage: gridBgLight, backgroundSize: "4rem 4rem" }}><h2 style={{ fontSize: "clamp(28px,5vw,44px)", fontWeight: 900, color: C.white, textTransform: "uppercase", lineHeight: 1.0 }}>{"START YOUR\nCOLLECTION TODAY"}</h2><p style={{ color: C.textLight, fontSize: "clamp(14px,2vw,18px)", marginTop: 16, marginBottom: 32 }}>Experience the joy of collecting and trading special cards</p><Btn v="whiteO" size="lg" onClick={() => setPage({ view: "collection" })}>GET STARTED</Btn></div></React.Fragment>);
+  return (<React.Fragment><div style={{ background: C.black, padding: mob ? "56px 16px" : "96px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "inline-block", border: "2px solid rgba(255,255,255,.3)", color: C.white, fontSize: 11, fontWeight: 700, letterSpacing: ".12em", padding: "5px 14px", marginBottom: 20 }}>{t("hero.badge", lang)}</div><h1 style={{ fontSize: "clamp(40px,8vw,76px)", fontWeight: 900, color: C.white, lineHeight: 1.0, letterSpacing: "-.03em", textTransform: "uppercase", whiteSpace: "pre-line" }}>{heroSettings.title}</h1><p style={{ color: C.textLight, fontSize: "clamp(14px,2vw,18px)", marginTop: 20, maxWidth: 460, lineHeight: 1.6 }}>{heroSettings.subtitle}</p><div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}><Btn v="filled" onClick={() => setPage({ view: "collection" })}>{t("hero.cta1", lang)}</Btn><Btn v="whiteO" onClick={() => setPage({ view: "collection" })}>{t("hero.cta2", lang)}</Btn></div></div></div><div style={{ padding: mob ? "40px 16px" : "64px 32px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 8 }}><div><h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: "-.02em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}><Zap size={22} /> {t("section.newReleases", lang)}</h2><p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>{t("section.newReleasesSub", lang)}</p></div><Btn size="sm" onClick={() => setPage({ view: "collection" })}>{t("section.viewAll", lang)}</Btn></div><div style={{ borderTop: `2px solid ${C.black}`, paddingTop: 20 }}><Carousel items={(() => { const nw = [...collections].filter(c => c.isNew).sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||"")); return nw.length >= 2 ? nw : [...collections].sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||"")).slice(0, 2); })()} onClickItem={id => setPage({ view: "detail", id })} cols={3} /></div></div><div style={{ padding: mob ? "16px 16px 40px" : "16px 32px 64px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 8 }}><div><h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: "-.02em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}><Crown size={22} /> {t("section.brands", lang)}</h2><p style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>{t("section.brandsSub", lang)}</p></div><div style={{ display: "flex", gap: 8 }}>{["TELECA COLLECTION CARD", "MIIM CARD"].map(b => { const isMiim = b === "MIIM CARD"; const active = bf === b; return <button key={b} onClick={() => setBf(b)} style={{ fontFamily: F.ui, fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", border: `2px solid ${isMiim ? C.miim : C.black}`, background: active ? (isMiim ? C.miim : C.black) : "transparent", color: active ? C.white : (isMiim ? C.miim : C.textPrimary), transition: "all .25s", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>{b}</button>; })}</div></div><Carousel items={[...collections].filter(c => c.brand === bf).sort((a,b) => (b.releaseDate||"").localeCompare(a.releaseDate||""))} onClickItem={id => setPage({ view: "detail", id })} cols={4} /></div><div style={{ background: "#000", padding: mob ? "56px 16px" : "80px 32px", textAlign: "center", backgroundImage: gridBgLight, backgroundSize: "4rem 4rem" }}><h2 style={{ fontSize: "clamp(28px,5vw,44px)", fontWeight: 900, color: C.white, textTransform: "uppercase", lineHeight: 1.0 }}>{t("section.ctaTitle", lang)}</h2><p style={{ color: C.textLight, fontSize: "clamp(14px,2vw,18px)", marginTop: 16, marginBottom: 32 }}>{t("section.ctaSub", lang)}</p><Btn v="whiteO" size="lg" onClick={() => setPage({ view: "collection" })}>{t("section.ctaBtn", lang)}</Btn></div></React.Fragment>);
 }
 
 function CollectionPage({ initialBrand }) {
-  const { collections, setPage } = useContext(Ctx); const { mob, cols } = useR(); const [bf, setBf] = useState(initialBrand || null); const [sf, setSf] = useState("all");
+  const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [bf, setBf] = useState(initialBrand || null); const [sf, setSf] = useState("all");
   let list = collections; if (bf) list = list.filter(c => c.brand === bf); if (sf === "new") list = list.filter(c => c.isNew); if (sf === "available") list = list.filter(c => c.status === "available"); const base = bf ? collections.filter(c => c.brand === bf) : collections;
-  return (<React.Fragment><div style={{ background: C.black, padding: mob ? "40px 16px" : "64px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 10 }}><LayoutGrid size={26} /> TELECA COLLECTION</h1><p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>Browse all trading card collections</p></div></div><div style={{ padding: mob ? "20px 16px 40px" : "32px 32px 64px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}><span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>Brand:</span>{["TELECA COLLECTION CARD", "MIIM CARD"].map(b => <Btn key={b} size="sm" v={bf === b ? "filled" : "outline"} onClick={() => setBf(bf === b ? null : b)}>{b}</Btn>)}</div><div style={{ display: "flex", marginBottom: 20, border: `2px solid ${C.black}`, width: "fit-content" }}>{[{ k: "all", l: `ALL (${base.length})` }, { k: "new", l: `NEW (${base.filter(c => c.isNew).length})` }, { k: "available", l: `AVAIL (${base.filter(c => c.status === "available").length})` }].map(s => <button key={s.k} onClick={() => setSf(s.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "8px 16px", cursor: "pointer", border: "none", background: sf === s.k ? C.black : C.white, color: sf === s.k ? C.white : C.textMuted }}>{s.l}</button>)}</div><div style={{ display: "grid", gridTemplateColumns: `repeat(${cols},1fr)`, gap: mob ? 16 : 24, alignItems: "stretch" }}>{list.map(i => <CardItem key={i.id} item={i} onClick={() => setPage({ view: "detail", id: i.id })} />)}</div></div></React.Fragment>);
+  return (<React.Fragment><div style={{ background: C.black, padding: mob ? "40px 16px" : "64px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}><div style={{ maxWidth: 1280, margin: "0 auto" }}><h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 10 }}><LayoutGrid size={26} /> {t("collection.title", lang)}</h1><p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>{t("collection.sub", lang)}</p></div></div><div style={{ padding: mob ? "20px 16px 40px" : "32px 32px 64px", maxWidth: 1280, margin: "0 auto" }}><div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}><span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>Brand:</span>{["TELECA COLLECTION CARD", "MIIM CARD"].map(b => <Btn key={b} size="sm" v={bf === b ? "filled" : "outline"} onClick={() => setBf(bf === b ? null : b)}>{b}</Btn>)}</div><div style={{ display: "flex", marginBottom: 20, border: `2px solid ${C.black}`, width: "fit-content" }}>{[{ k: "all", l: `ALL (${base.length})` }, { k: "new", l: `NEW (${base.filter(c => c.isNew).length})` }, { k: "available", l: `AVAIL (${base.filter(c => c.status === "available").length})` }].map(s => <button key={s.k} onClick={() => setSf(s.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, padding: "8px 16px", cursor: "pointer", border: "none", background: sf === s.k ? C.black : C.white, color: sf === s.k ? C.white : C.textMuted }}>{s.l}</button>)}</div><div style={{ display: "grid", gridTemplateColumns: `repeat(${cols},1fr)`, gap: mob ? 16 : 24, alignItems: "stretch" }}>{list.map(i => <CardItem key={i.id} item={i} onClick={() => setPage({ view: "detail", id: i.id })} />)}</div></div></React.Fragment>);
 }
 
 /* ═══════════════════════════════════════
    ★ CTA Auto-Switch Logic
    ═══════════════════════════════════════ */
-function getCTAInfo(item) {
+function getCTAInfo(item, lang: Lang = "en") {
   const today = new Date().toISOString().split("T")[0];
   // 품절
   if (item.status === "soldout") {
-    return { label: "Restock Alert", icon: <Bell size={14} />, type: "restock" };
+    return { label: t("cta.restock", lang), icon: <Bell size={14} />, type: "restock" };
   }
   // 릴리즈 전
   if (item.releaseDate && item.releaseDate > today) {
-    return { label: "Pre-Order Inquiry", icon: <CalendarCheck size={14} />, type: "preorder" };
+    return { label: t("cta.preorder", lang), icon: <CalendarCheck size={14} />, type: "preorder" };
   }
   // 판매중
-  return { label: "Order Inquiry", icon: <ClipboardList size={14} />, type: "purchase" };
+  return { label: t("cta.purchase", lang), icon: <ClipboardList size={14} />, type: "purchase" };
 }
 
 /* ═══════════════════════════════════════
@@ -728,6 +763,7 @@ const ORG_TYPES = [
 
 function OrderModal({ open, onClose, item, ctaType }) {
   const { mob } = useR();
+  const { lang } = useContext(Ctx) || {};
   const [form, setForm] = useState({
     name: "", email: "", phone: "", orgType: "", orgName: "", region: "", regionOther: "", qty: 1, message: "",
   });
@@ -744,7 +780,17 @@ function OrderModal({ open, onClose, item, ctaType }) {
     if (!form.orgType) { alert("Please select your organization type."); return; }
     if (!form.region) { alert("Please select your region."); return; }
     if (ctaType !== "restock" && form.qty < 1) { alert("Please enter a quantity."); return; }
-    setSubmitted(true);
+    const orderData = {
+      collection_id: item.id, inquiry_type: ctaType,
+      name: form.name, email: form.email, phone: form.phone || null,
+      org_type: form.orgType, org_name: form.orgName || null,
+      region: form.region, region_other: form.regionOther || null,
+      quantity: form.qty, message: form.message || null,
+    };
+    submitOrderInquiry(orderData).then(ok => {
+      if (ok) { setSubmitted(true); notifyEmail("order", orderData); }
+      else alert("Failed to submit. Please try again.");
+    });
   };
   const resetAndClose = () => {
     setSubmitted(false);
@@ -865,7 +911,7 @@ function DetailPage({ id }) {
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
   const related = collections.filter(c => c.id !== id && c.brand === item.brand).slice(0, 4);
   const rs = (r) => ({ fontSize: 11, fontWeight: 700, padding: "3px 10px", textTransform: "uppercase", background: r === "Common" ? C.gray100 : r === "Rare" ? "#DBEAFE" : r === "Super Rare" ? "#FEF3C7" : "#FCE7F3", color: r === "Common" ? C.textMuted : r === "Rare" ? "#1E40AF" : r === "Super Rare" ? "#92400E" : "#BE185D" });
-  const cta = getCTAInfo(item);
+  const cta = getCTAInfo(item, lang);
 
   return (
     <React.Fragment>
@@ -906,15 +952,15 @@ function DetailPage({ id }) {
       <div style={{ maxWidth: 1280, margin: "0 auto", overflow: "hidden" }}>
         {tab === "chasing" && (
           <div style={{ padding: mob ? "28px 16px" : "40px 32px" }}>
-            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>SPECIAL CARD LINEUP</h3>
-            <p style={{ color: C.textMuted, fontSize: 13, marginBottom: 28 }}>Rare cards you can find in this product</p>
+            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>{t("detail.specialTitle", lang)}</h3>
+            <p style={{ color: C.textMuted, fontSize: 13, marginBottom: 28 }}>{t("detail.specialSub", lang)}</p>
             <ChasingCarousel cards={item.chasingCards} />
           </div>
         )}
 
         {tab === "checklist" && (
           <div style={{ padding: mob ? "28px 16px" : "36px 32px", overflowX: "auto" }}>
-            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 20 }}>CARD CHECKLIST</h3>
+            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 20 }}>{t("detail.checklistTitle", lang)}</h3>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
               <thead><tr>{["#", "CARD NAME", "RARITY"].map(h => <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 700, padding: "10px 14px", borderBottom: `3px solid ${C.black}`, color: C.textMuted }}>{h}</th>)}</tr></thead>
               <tbody>{item.checklist.map((cl, i) => <tr key={i}><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontWeight: 700, fontSize: 13, width: 70 }}>{cl.number}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}`, fontSize: 13 }}>{cl.name}</td><td style={{ padding: "10px 14px", borderBottom: `1px solid ${C.gray200}` }}><span style={rs(cl.rarity)}>{cl.rarity.toUpperCase()}</span></td></tr>)}</tbody>
@@ -933,7 +979,7 @@ function DetailPage({ id }) {
       {related.length > 0 && (
         <div style={{ background: C.black, padding: mob ? "32px 16px" : "48px 32px", marginTop: 40 }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, color: C.white, textTransform: "uppercase", marginBottom: 20 }}>RELATED PRODUCTS</h3>
+            <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, color: C.white, textTransform: "uppercase", marginBottom: 20 }}>{t("detail.relatedTitle", lang)}</h3>
             <div style={mob ? { display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 8 } : { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
               {related.map(r => <div key={r.id} onClick={() => setPage({ view: "detail", id: r.id })} style={{ background: C.gray800, cursor: "pointer", overflow: "hidden", border: "2px solid rgba(255,255,255,.08)", ...(mob ? { minWidth: "75%", scrollSnapAlign: "start", flexShrink: 0 } : {}) }}><AutoImg src={r.thumbnail} padding="8px" style={{ height: mob ? 140 : 170 }} /><div style={{ padding: "12px 14px" }}><div style={{ fontSize: 10, fontWeight: 700, color: C.textLight, letterSpacing: ".04em", marginBottom: 4 }}>{r.brand}</div><div style={{ fontSize: 15, fontWeight: 900, color: C.white }}>{r.title}</div></div></div>)}
             </div>
@@ -946,6 +992,7 @@ function DetailPage({ id }) {
 
 function ContactPage() {
   const { mob } = useR();
+  const { lang } = useContext(Ctx) || {};
   const [form, setForm] = useState({ name: "", email: "", company: "", subject: "", message: "" });
   const [privacy, setPrivacy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -957,15 +1004,15 @@ function ContactPage() {
       return;
     }
     if (!privacy) { alert("Please agree to the privacy policy."); return; }
-    submitContactInquiry(form).then(ok => { if (ok) setSubmitted(true); else alert("Failed to submit. Please try again."); });
+    submitContactInquiry(form).then(ok => { if (ok) { setSubmitted(true); notifyEmail("contact", form); } else alert("Failed to submit. Please try again."); });
   };
 
   return (
     <React.Fragment>
       <div style={{ background: C.black, padding: mob ? "40px 16px" : "64px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase" }}>CONTACT US</h1>
-          <p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>Get in touch with the TELECA team</p>
+          <h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase" }}>{t("contact.title", lang)}</h1>
+          <p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>{t("contact.sub", lang)}</p>
         </div>
       </div>
 
@@ -1100,6 +1147,7 @@ const FAQ_DATA = [
 
 function FaqPage() {
   const { mob } = useR();
+  const { lang } = useContext(Ctx) || {};
   const { setPage } = useContext(Ctx);
   const [openIdx, setOpenIdx] = useState(null);
 
@@ -1109,8 +1157,8 @@ function FaqPage() {
     <React.Fragment>
       <div style={{ background: C.black, padding: mob ? "40px 16px" : "64px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase" }}>FAQ</h1>
-          <p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>Frequently Asked Questions</p>
+          <h1 style={{ fontSize: "clamp(28px,5vw,40px)", fontWeight: 900, color: C.white, textTransform: "uppercase" }}>{t("faq.title", lang)}</h1>
+          <p style={{ color: C.textOnDark, fontSize: 15, marginTop: 8 }}>{t("faq.sub", lang)}</p>
         </div>
       </div>
 
@@ -1400,16 +1448,61 @@ function EditorForm({ editingId, onDone, showToast }) {
   </div>);
 }
 
+
+/* ═══════════════════════════════════════
+   URL ROUTING HELPERS
+   ═══════════════════════════════════════ */
+function pageToPath(page: any): string {
+  switch (page.view) {
+    case "home": return "/";
+    case "collection": return "/collection" + (page.brand ? "?brand=" + encodeURIComponent(page.brand) : "");
+    case "detail": return "/collection/" + page.id;
+    case "contact": return "/contact";
+    case "faq": return "/faq";
+    case "privacy": return "/privacy";
+    case "terms": return "/terms";
+    default: return "/";
+  }
+}
+
+function pathToPage(pathname: string, search: string): any {
+  if (pathname === "/" || pathname === "") return { view: "home" };
+  if (pathname === "/contact") return { view: "contact" };
+  if (pathname === "/faq") return { view: "faq" };
+  if (pathname === "/privacy") return { view: "privacy" };
+  if (pathname === "/terms") return { view: "terms" };
+  if (pathname === "/collection") {
+    const params = new URLSearchParams(search);
+    const brand = params.get("brand");
+    return { view: "collection", brand: brand || undefined };
+  }
+  if (pathname.startsWith("/collection/")) {
+    const id = pathname.replace("/collection/", "");
+    return { view: "detail", id };
+  }
+  return { view: "home" };
+}
 /* ═══════════════════════════════════════
    APP ROOT
    ═══════════════════════════════════════ */
 export default function SiteClient({ initialCollections = [], initialHeroSettings = null }: { initialCollections?: any[]; initialHeroSettings?: any }) {
-  const [page, setPageRaw] = useState({ view: "home" });
+  const [page, setPageRaw] = useState(() => {
+    if (typeof window !== "undefined") return pathToPage(window.location.pathname, window.location.search);
+    return { view: "home" };
+  });
   const [collections, setCollections] = useState(initialCollections);
   const [heroSettings, setHeroSettings] = useState(initialHeroSettings || { title: "COLLECT\nTHE LEGENDS", subtitle: "Collect special moments of the world's greatest stars", featuredId: null });
+  const [lang, setLang] = useState<Lang>("en");
   const [adminMode, setAdminMode] = useState(false);
   const [adminAuth, setAdminAuth] = useState(false);
-  const setPage = (p) => { setPageRaw(p); window.scrollTo({ top: 0, behavior: "instant" }); };
+  const setPage = (p) => {
+    setPageRaw(p);
+    window.scrollTo({ top: 0, behavior: "instant" });
+    const path = pageToPath(p);
+    if (window.location.pathname + window.location.search !== path) {
+      window.history.pushState(p, "", path);
+    }
+  };
 
   // Dynamic page title for SEO
   useEffect(() => {
@@ -1453,7 +1546,7 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     return () => document.head.removeChild(s);
   }, []);
 
-  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
+  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, lang, toggleLang, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
 
   if (adminMode) {
     if (!adminAuth) return <AdminLogin onAuth={() => setAdminAuth(true)} />;
