@@ -1548,7 +1548,7 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
     return () => document.head.removeChild(s);
   }, []);
 
-  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, lang, toggleLang, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
+  const ctxValue = { collections, setCollections, heroSettings, setHeroSettings, page, setPage, lang, toggleLang: () => { const n = lang === "en" ? "ko" : "en"; setLang(n); localStorage.setItem("teleca-lang", n); }, setAdminMode: (v) => { setAdminMode(v); if (!v) setAdminAuth(false); } };
 
   if (adminMode) {
     if (!adminAuth) return <AdminLogin onAuth={() => setAdminAuth(true)} />;
