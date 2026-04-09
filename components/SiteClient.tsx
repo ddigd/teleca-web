@@ -1578,6 +1578,7 @@ export default function SiteClient({ initialCollections = [], initialHeroSetting
   };
   useEffect(() => { const d = detectLang(); if (d !== 'en') setLang(d); }, []);
   const [adminMode, setAdminMode] = useState(false);
+  useEffect(() => { fetchCollectionsFromDB().then(d => { if (d.length) setCollections(d); }); }, []);
   const [adminAuth, setAdminAuth] = useState(false);
   const setPage = (p) => {
     setPageRaw(p);
