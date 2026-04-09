@@ -968,7 +968,7 @@ function DetailPage({ id }) {
   const item = collections.find(c => c.id === id);
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
   const related = collections.filter(c => c.id !== id && c.brand === item.brand).slice(0, 4);
-  const rs = (r) => ({ fontSize: 11, fontWeight: 700, padding: "3px 10px", textTransform: "uppercase", background: r === "Common" ? C.gray100 : r === "Rare" ? "#DBEAFE" : r === "Super Rare" ? "#FEF3C7" : "#FCE7F3", color: r === "Common" ? C.textMuted : r === "Rare" ? "#1E40AF" : r === "Super Rare" ? "#92400E" : "#BE185D" });
+  const rs = (r) => { const palettes = [["#DBEAFE","#1E40AF"],["#FEF3C7","#92400E"],["#FCE7F3","#BE185D"],["#D1FAE5","#065F46"],["#EDE9FE","#5B21B6"],["#FEE2E2","#991B1B"],["#E0E7FF","#3730A3"],["#FEF9C3","#854D0E"],["#F0FDFA","#115E59"],["#F5F5F4","#44403C"]]; let h=0; for(let i=0;i<r.length;i++) h=((h<<5)-h+r.charCodeAt(i))|0; const [bg,fg]=palettes[Math.abs(h)%palettes.length]; return { fontSize:11, fontWeight:700, padding:"3px 10px", textTransform:"uppercase", background:bg, color:fg, borderRadius:2 }; };
   const cta = getCTAInfo(item, lang);
 
   return (
