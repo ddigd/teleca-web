@@ -154,9 +154,9 @@ function parseXlsx(file: File): Promise<any[]> {
         const lines = text.split("\n").filter((l: string) => l.trim());
         const rows = lines.slice(1).map((line: string) => {
           const cols = line.split(",").map((c: string) => c.trim().replace(/^"|"$/g, ""));
-          return { number: cols[0] || "", name: cols[1] || "", rarity: cols[2] || "Common" };
+          const row = { number: cols[0] || "", name: cols[1] || "", rarity: cols[2] || "Common" }; if (!row.number && !row.name) return null; return row;
         });
-        resolve(rows);
+        resolve(rows.filter(Boolean));
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
