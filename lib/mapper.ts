@@ -17,7 +17,7 @@ export function mapCollection(c: Collection) {
     releaseDate: c.release_date || "",
     date: c.date_label || "",
     isNew: c.is_new,
-    status: c.status,
+    status: c.status, themePrimary: c.theme_primary || "#7C3AED", themeBg: c.theme_bg || "#1a1a2e",
     chasingCards: (c.chasing_cards || [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map(cc => ({
