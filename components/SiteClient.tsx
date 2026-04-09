@@ -124,7 +124,7 @@ async function fetchCollectionsFromDB() {
     thumbnail: c.thumbnail_url, mainImage: c.main_image_url,
     cardsPerPack: c.cards_per_pack, packsPerBox: c.packs_per_box,
     boxesPerCase: c.boxes_per_case, releaseDate: c.release_date || "",
-    date: c.date_label || "", isNew: c.is_new, status: c.status,
+    date: c.date_label || "", isNew: c.is_new, status: c.status, themePrimary: c.theme_primary || "#7C3AED", themeBg: c.theme_bg || "#1a1a2e",
     chasingCards: (c.chasing_cards || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((cc: any) => ({
       name: cc.name, desc: cc.description || "", ratio: cc.ratio || "",
       tag: cc.tag || "", tagColor: cc.tag_color || "#7C3AED",
@@ -299,7 +299,7 @@ function ChasingCardItem({ cc, index }) {
       {/* ── Image Area — Premium Display Case ── */}
       <div style={{
         position: "relative",
-        background: "linear-gradient(160deg, #0a0a12 0%, #12121f 40%, #0e0e1a 100%)",
+        background: `linear-gradient(160deg, ${(item?.themePrimary || "#7C3AED")}15 0%, #12121f 40%, #0e0e1a 100%)`,
         borderBottom: `2px solid ${C.black}`,
         flexShrink: 0,
       }}>
@@ -965,11 +965,15 @@ function DetailPage({ id }) {
   const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
   const [clView, setClView] = useState("list");
+  if (!fm.themePrimary) u("themePrimary", "#7C3AED");
+  if (!fm.themeBg) u("themeBg", "#1a1a2e");
   const item = collections.find(c => c.id === id);
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
   const related = collections.filter(c => c.id !== id && c.brand === item.brand).slice(0, 4);
   const rs = (r) => { const palettes = [["#DBEAFE","#1E40AF"],["#FEF3C7","#92400E"],["#FCE7F3","#BE185D"],["#D1FAE5","#065F46"],["#EDE9FE","#5B21B6"],["#FEE2E2","#991B1B"],["#E0E7FF","#3730A3"],["#FEF9C3","#854D0E"],["#F0FDFA","#115E59"],["#F5F5F4","#44403C"]]; let h=0; for(let i=0;i<r.length;i++) h=((h<<5)-h+r.charCodeAt(i))|0; const [bg,fg]=palettes[Math.abs(h)%palettes.length]; return { fontSize:11, fontWeight:700, padding:"3px 10px", textTransform:"uppercase", background:bg, color:fg, borderRadius:2 }; };
   const cta = getCTAInfo(item, lang);
+  const tp = item.themePrimary || "#7C3AED";
+  const tbg = item.themeBg || "#1a1a2e";
 
   return (
     <React.Fragment>
@@ -979,7 +983,7 @@ function DetailPage({ id }) {
         <span style={{ color: C.textPrimary }}>{item.title}</span>
       </div>
 
-      <div style={{ background: C.black, padding: mob ? "32px 16px" : "48px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}>
+      <div style={{ background: `linear-gradient(145deg, ${tbg}, ${tbg}cc, #0f1626)`, padding: mob ? "32px 16px" : "48px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: mob ? 24 : 48, alignItems: "center" }}>
           <div>
             <button style={{ color: C.textOnDark, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "none", border: "none", marginBottom: 24, display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase" }} onClick={() => setPage({ view: "collection" })}><ArrowLeft size={14} /> COLLECTION</button>
@@ -992,7 +996,7 @@ function DetailPage({ id }) {
             <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
               {[{ v: item.cardsPerPack, l: "CARDS/PACK" }, { v: item.packsPerBox, l: "PACKS/BOX" }, { v: item.boxesPerCase || "-", l: "BOX/CASE" }, { v: item.releaseDate, l: "RELEASE" }].map((s, i) => <div key={i} style={{ background: "rgba(255,255,255,.06)", border: "2px solid rgba(255,255,255,.12)", padding: "10px 14px", minWidth: 76 }}><div style={{ fontSize: 18, fontWeight: 900, color: C.white }}>{s.v}</div><div style={{ fontSize: 10, color: C.textLight, fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>{s.l}</div></div>)}
             </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Btn v="blue" onClick={() => setModalOpen(true)}>{cta.icon} {cta.label}</Btn></div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Btn v="blue" onClick={() => setModalOpen(true)} style={{ background: tp, borderColor: tp }}>{cta.icon} {cta.label}</Btn></div>
           </div>
           <AutoImg src={item.mainImage} padding="24px" style={{ height: mob ? 280 : 400, border: "2px solid rgba(255,255,255,.08)" }} />
         </div>
@@ -1003,7 +1007,7 @@ function DetailPage({ id }) {
 
       <div style={{ display: "flex", borderBottom: `2px solid ${C.black}`, padding: mob ? "0 16px" : "0 32px", maxWidth: 1280, margin: "0 auto", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {[{ k: "chasing", l: "CHASING CARDS", i: <Target size={14} /> }, { k: "checklist", l: "CHECKLIST", i: <CheckSquare size={14} /> }, { k: "info", l: "PRODUCT INFO", i: <Info size={14} /> }].map(t => (
-          <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: mob ? "14px 14px" : "16px 24px", cursor: "pointer", background: "none", border: "none", borderBottom: tab === t.k ? `3px solid ${C.black}` : "3px solid transparent", marginBottom: -2, color: tab === t.k ? C.textPrimary : C.textMuted, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>{t.i} {t.l}</button>
+          <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: F.ui, fontSize: 12, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: mob ? "14px 14px" : "16px 24px", cursor: "pointer", background: "none", border: "none", borderBottom: tab === t.k ? `3px solid ${tp}` : "3px solid transparent", marginBottom: -2, color: tab === t.k ? C.textPrimary : C.textMuted, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>{t.i} {t.l}</button>
         ))}
       </div>
 
