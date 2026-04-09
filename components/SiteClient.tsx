@@ -965,8 +965,6 @@ function DetailPage({ id }) {
   const { collections, setPage, lang } = useContext(Ctx); const { mob, cols } = useR(); const [tab, setTab] = useState("chasing");
   const [modalOpen, setModalOpen] = useState(false);
   const [clView, setClView] = useState("list");
-  if (!fm.themePrimary) u("themePrimary", "#7C3AED");
-  if (!fm.themeBg) u("themeBg", "#1a1a2e");
   const item = collections.find(c => c.id === id);
   if (!item) return <div style={{ padding: 40 }}>Not found.</div>;
   const related = collections.filter(c => c.id !== id && c.brand === item.brand).slice(0, 4);
@@ -1496,7 +1494,7 @@ function AdminPanel() {
 function EditorForm({ editingId, onDone, showToast }) {
   const { collections, setCollections } = useContext(Ctx); const { mob } = useR(); const isNew = editingId === "new";
   const existing = !isNew ? collections.find(c => c.id === editingId) : null;
-  const blank = { brand: "TELECA COLLECTION CARD", title: "", description: "", productInfo: "", thumbnail: null, mainImage: null, cardsPerPack: 5, packsPerBox: 20, boxesPerCase: 12, releaseDate: "", date: "", isNew: true, status: "new", chasingCards: [], checklist: [], checklistUrl: "" };
+  const blank = { brand: "TELECA COLLECTION CARD", title: "", description: "", productInfo: "", thumbnail: null, mainImage: null, cardsPerPack: 5, packsPerBox: 20, boxesPerCase: 12, releaseDate: "", date: "", isNew: true, status: "new", chasingCards: [], checklist: [], checklistUrl: "", themePrimary: "#7C3AED", themeBg: "#1a1a2e" };
   const [fm, setFm] = useState(existing ? { ...existing } : blank); const u = (k, v) => setFm(p => ({ ...p, [k]: v }));
   const addCC = () => u("chasingCards", [...fm.chasingCards, { name: "", desc: "", ratio: "", tag: "", tagColor: "#7C3AED", code: "", image: null }]);
   const updCC = (i, k, v) => { const a = [...fm.chasingCards]; a[i] = { ...a[i], [k]: v }; u("chasingCards", a); };
