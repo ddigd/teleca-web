@@ -230,7 +230,7 @@ function AutoImg({ src, style: sx, padding = "8px", noShadow }) {
 /* ═══════════════════════════════════════
    ★★ ChasingCardItem — 3D tilt + holographic shimmer
    ═══════════════════════════════════════ */
-function ChasingCardItem({ cc, index }) {
+function ChasingCardItem({ cc, index, themeBg }) {
   const elRef = useRef(null);
   const [inView, setInView] = useState(false);
   const [appeared, setAppeared] = useState(false); // entrance done → clear delay
@@ -299,7 +299,7 @@ function ChasingCardItem({ cc, index }) {
       {/* ── Image Area — Premium Display Case ── */}
       <div style={{
         position: "relative",
-        background: `linear-gradient(160deg, ${accent}15 0%, #12121f 40%, #0e0e1a 100%)`,
+        background: themeBg ? `linear-gradient(160deg, ${accent}20 0%, ${themeBg}ee 40%, ${themeBg} 100%)` : `linear-gradient(160deg, ${accent}15 0%, #12121f 40%, #0e0e1a 100%)`,
         borderBottom: `2px solid ${C.black}`,
         flexShrink: 0,
       }}>
@@ -322,7 +322,7 @@ function ChasingCardItem({ cc, index }) {
         {/* Soft vignette — hover only */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
-          background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.2) 100%)",
+          background: themeBg && parseInt(themeBg.slice(1,3),16)*299+parseInt(themeBg.slice(3,5),16)*587+parseInt(themeBg.slice(5,7),16)*114 > 140000 ? "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.05) 100%)" : "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.2) 100%)",
           opacity: hov ? 1 : 0, transition: "opacity .4s ease",
         }} />
 
@@ -396,7 +396,7 @@ function ChasingCardItem({ cc, index }) {
 /* ═══════════════════════════════════════
    CHASING CAROUSEL — 3 visible, arrows, peek
    ═══════════════════════════════════════ */
-function ChasingCarousel({ cards }) {
+function ChasingCarousel({ cards, themeBg }) {
   const scrollRef = useRef(null);
   const { mob } = useR();
   const [canL, setCanL] = useState(false);
@@ -472,7 +472,7 @@ function ChasingCarousel({ cards }) {
             <div key={i} data-cc style={{
               flex: cardFlex, scrollSnapAlign: "start", minWidth: 0,
             }}>
-              <ChasingCardItem cc={cc} index={i} />
+              <ChasingCardItem cc={cc} index={i} themeBg={themeBg} />
             </div>
           ))}
         </div>
@@ -972,6 +972,11 @@ function DetailPage({ id }) {
   const cta = getCTAInfo(item, lang);
   const tp = item.themePrimary || "#7C3AED";
   const tbg = item.themeBg || "#1a1a2e";
+  const isLight = (hex) => { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return (r*299+g*587+b*114)/1000 > 140; };
+  const gradEnd = isLight(tbg) ? "#ffffff" : "#0f1626";
+  const heroText = isLight(tbg) ? "#111" : C.white;
+  const heroSub = isLight(tbg) ? "#444" : C.textLight;
+  const heroBorder = isLight(tbg) ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.12)";
 
   return (
     <React.Fragment>
@@ -981,18 +986,18 @@ function DetailPage({ id }) {
         <span style={{ color: C.textPrimary }}>{item.title}</span>
       </div>
 
-      <div style={{ padding: mob ? "32px 16px" : "48px 32px", background: `linear-gradient(145deg, ${tbg}, ${tbg}cc, #0f1626)` }}>
+      <div style={{ padding: mob ? "32px 16px" : "48px 32px", background: `linear-gradient(145deg, ${tbg}, ${tbg}cc, ${gradEnd})` }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: mob ? 24 : 48, alignItems: "center" }}>
           <div>
-            <button style={{ color: C.textOnDark, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "none", border: "none", marginBottom: 24, display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase" }} onClick={() => setPage({ view: "collection" })}><ArrowLeft size={14} /> COLLECTION</button>
+            <button style={{ color: heroSub, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "none", border: "none", marginBottom: 24, display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase" }} onClick={() => setPage({ view: "collection" })}><ArrowLeft size={14} /> COLLECTION</button>
             <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", textTransform: "uppercase", background: "rgba(255,255,255,.08)", color: C.white, border: "1px solid rgba(255,255,255,.2)" }}>{item.brand}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", textTransform: "uppercase", background: isLight(tbg) ? "rgba(0,0,0,.06)" : "rgba(255,255,255,.08)", color: heroText, border: `1px solid ${heroBorder}` }}>{item.brand}</span>
               {item.isNew && <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", background: C.red, color: C.white }}>NEW</span>}
             </div>
-            <h1 style={{ fontSize: "clamp(28px,5vw,42px)", fontWeight: 900, color: C.white, textTransform: "uppercase", lineHeight: 1.0, marginBottom: 14 }}>{item.title}</h1>
-            <p style={{ color: C.textLight, fontSize: 14, lineHeight: 1.6, marginBottom: 24, maxWidth: 480 }}>{item.description}</p>
+            <h1 style={{ fontSize: "clamp(28px,5vw,42px)", fontWeight: 900, color: heroText, textTransform: "uppercase", lineHeight: 1.0, marginBottom: 14 }}>{item.title}</h1>
+            <p style={{ color: heroSub, fontSize: 14, lineHeight: 1.6, marginBottom: 24, maxWidth: 480 }}>{item.description}</p>
             <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-              {[{ v: item.cardsPerPack, l: "CARDS/PACK" }, { v: item.packsPerBox, l: "PACKS/BOX" }, { v: item.boxesPerCase || "-", l: "BOX/CASE" }, { v: item.releaseDate, l: "RELEASE" }].map((s, i) => <div key={i} style={{ background: "rgba(255,255,255,.06)", border: "2px solid rgba(255,255,255,.12)", padding: "10px 14px", minWidth: 76 }}><div style={{ fontSize: 18, fontWeight: 900, color: C.white }}>{s.v}</div><div style={{ fontSize: 10, color: C.textLight, fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>{s.l}</div></div>)}
+              {[{ v: item.cardsPerPack, l: "CARDS/PACK" }, { v: item.packsPerBox, l: "PACKS/BOX" }, { v: item.boxesPerCase || "-", l: "BOX/CASE" }, { v: item.releaseDate, l: "RELEASE" }].map((s, i) => <div key={i} style={{ background: isLight(tbg) ? "rgba(0,0,0,.04)" : "rgba(255,255,255,.06)", border: `2px solid ${heroBorder}`, padding: "10px 14px", minWidth: 76 }}><div style={{ fontSize: 18, fontWeight: 900, color: heroText }}>{s.v}</div><div style={{ fontSize: 10, color: heroSub, fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>{s.l}</div></div>)}
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><Btn v="blue" onClick={() => setModalOpen(true)} style={{ background: tp, borderColor: tp }}>{cta.icon} {cta.label}</Btn></div>
           </div>
@@ -1014,7 +1019,7 @@ function DetailPage({ id }) {
           <div style={{ padding: mob ? "28px 16px" : "40px 32px" }}>
             <h3 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 900, textTransform: "uppercase", marginBottom: 4 }}>{t("detail.specialTitle", lang)}</h3>
             <p style={{ color: C.textMuted, fontSize: 13, marginBottom: 28 }}>{t("detail.specialSub", lang)}</p>
-            <ChasingCarousel cards={item.chasingCards} />
+            <ChasingCarousel cards={item.chasingCards} themeBg={tbg} />
           </div>
         )}
 
@@ -1113,7 +1118,7 @@ function ContactPage() {
               {/* Header */}
               <div style={{ background: C.black, padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: C.white, textTransform: "uppercase" }}>CONTACT CARD</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: heroText, textTransform: "uppercase" }}>CONTACT CARD</div>
                   <div style={{ fontSize: 10, color: C.textLight, marginTop: 2, letterSpacing: ".1em" }}>SEND US A MESSAGE</div>
                 </div>
                 <div style={{ width: 40, height: 40, border: "2px solid rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
