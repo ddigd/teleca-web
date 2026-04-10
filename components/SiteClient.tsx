@@ -981,7 +981,7 @@ function DetailPage({ id }) {
         <span style={{ color: C.textPrimary }}>{item.title}</span>
       </div>
 
-      <div style={{ background: `linear-gradient(145deg, ${tbg}, ${tbg}cc, #0f1626)`, padding: mob ? "32px 16px" : "48px 32px", backgroundImage: gridBg, backgroundSize: "4rem 4rem" }}>
+      <div style={{ padding: mob ? "32px 16px" : "48px 32px", background: `linear-gradient(145deg, ${tbg}, ${tbg}cc, #0f1626)` }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: mob ? 24 : 48, alignItems: "center" }}>
           <div>
             <button style={{ color: C.textOnDark, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "none", border: "none", marginBottom: 24, display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase" }} onClick={() => setPage({ view: "collection" })}><ArrowLeft size={14} /> COLLECTION</button>

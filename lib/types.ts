@@ -13,7 +13,7 @@ export interface Collection {
   date_label: string | null;
   is_new: boolean;
   status: string;
-  sort_order: number;
+  sort_order: number; theme_primary?: string | null; theme_bg?: string | null;
   checklist_url?: string | null;
   chasing_cards?: ChasingCard[];
   checklist_items?: ChecklistItem[];
@@ -29,7 +29,7 @@ export interface ChasingCard {
   tag_color: string;
   code: string | null;
   image_url: string | null;
-  sort_order: number;
+  sort_order: number; theme_primary?: string | null; theme_bg?: string | null;
 }
 
 export interface ChecklistItem {
@@ -38,7 +38,7 @@ export interface ChecklistItem {
   number: string | null;
   name: string | null;
   rarity: string | null;
-  sort_order: number;
+  sort_order: number; theme_primary?: string | null; theme_bg?: string | null;
 }
 
 export interface HeroSettings {
